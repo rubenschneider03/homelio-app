@@ -1,22 +1,78 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-inter);
-
-  --color-brand:  #1C2B3A;
-  --color-canvas: #F5F3EF;
-  --color-teal:   #2D7D7B;
-  --color-line:   #E8E6E1;
-  --color-ink:    #141414;
-  --color-subtle: #8A8A8A;
-
-  --color-success: #3A7D5B;
-  --color-warning: #C4873A;
-  --color-danger:  #B84040;
-  --color-info:    #3A6FA8;
+/* ─── Design tokens ─────────────────────────────────────────── */
+:root {
+  --bg:        #0a0a0a;
+  --surface:   #141414;
+  --surface2:  #1c1c1c;
+  --fg:        #f5f5f4;
+  --muted:     #737373;
+  --hairline:  #262626;
+  --gold:      #d4a853;
+  --azure:     #7baec8;
+  --grad:      linear-gradient(135deg, #d4a853, #7baec8);
 }
 
+/* ─── Tailwind theme tokens ─────────────────────────────────── */
+@theme inline {
+  --font-sans:    var(--font-inter);
+  --font-display: var(--font-instrument-serif);
+
+  --color-bg:       #0a0a0a;
+  --color-surface:  #141414;
+  --color-surface2: #1c1c1c;
+  --color-fg:       #f5f5f4;
+  --color-muted:    #737373;
+  --color-hairline: #262626;
+  --color-gold:     #d4a853;
+  --color-azure:    #7baec8;
+}
+
+/* ─── Base ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
 body {
-  background-color: #ffffff;
-  color: #141414;
+  background-color: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 3px; }
+::-webkit-scrollbar-track      { background: var(--bg); }
+::-webkit-scrollbar-thumb      { background: var(--hairline); border-radius: 2px; }
+
+/* ─── Keyframes ─────────────────────────────────────────────── */
+@keyframes contentReveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%       { opacity: 1;   transform: translateY(6px); }
+}
+
+/* ─── Utilities ─────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.text-grad {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

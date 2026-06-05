@@ -1,24 +1,33 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Homelio – Der vorgelagerte Wohnungsmarkt",
+  title: "Homelio – Der unsichtbare Wohnungsmarkt",
   description:
-    "Finde deine nächste Wohnung, bevor sie ausgeschrieben wird. Homelio vernetzt wechselwillige Mieter frühzeitig – kostenlos und datenschutzkonform.",
+    "Homelio vernetzt wechselwillige Mieter frühzeitig – bevor Wohnungen offiziell gekündigt oder ausgeschrieben werden.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="de" className={`${inter.variable} antialiased`}>
-      <body className="min-h-screen bg-white font-sans">{children}</body>
+    <html lang="de" className={`${inter.variable} ${instrumentSerif.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
