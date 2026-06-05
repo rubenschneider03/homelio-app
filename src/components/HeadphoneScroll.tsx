@@ -9,23 +9,12 @@ import {
 } from 'framer-motion';
 
 // ─── Frame manifest ───────────────────────────────────────────────────────────
-// Source numbering has gaps; only the 62 frames that actually exist are listed.
-const FRAME_GROUPS: [number, number][] = [
-  [1,  13],
-  [21, 33],
-  [41, 53],
-  [61, 73],
-  [81, 90],
-];
+const FRAME_COUNT = 90;
 
-const FRAME_NUMBERS: number[] = FRAME_GROUPS.flatMap(([s, e]) =>
-  Array.from({ length: e - s + 1 }, (_, i) => s + i),
-);
-
-const FRAME_COUNT = FRAME_NUMBERS.length; // 62
-
-const getFramePath = (n: number) =>
-  `/images/ezgif-frame-${String(n).padStart(3, '0')}.jpg`;
+const getFramePath = (index: number) => {
+  const frameNumber = String(index + 1).padStart(3, '0');
+  return `/images/ezgif-frame-${frameNumber}.jpg`;
+};
 
 // ─── Text overlays ────────────────────────────────────────────────────────────
 const OVERLAYS = [
@@ -122,13 +111,13 @@ export default function HeadphoneScroll() {
       if (loaded === FRAME_COUNT) setIsLoaded(true);
     };
 
-    FRAME_NUMBERS.forEach((n, i) => {
+    for (let i = 0; i < FRAME_COUNT; i++) {
       const img    = new Image();
       img.onload   = tick;
       img.onerror  = tick; // don't stall if a frame is missing
-      img.src      = getFramePath(n);
+      img.src      = getFramePath(i);
       images[i]    = img;
-    });
+    }
 
     imagesRef.current = images;
   }, []);
