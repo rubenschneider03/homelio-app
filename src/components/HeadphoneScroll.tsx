@@ -9,30 +9,52 @@ import {
 } from 'framer-motion';
 
 // ─── Frame manifest ───────────────────────────────────────────────────────────
-const FRAME_COUNT = 90;
+const FRAME_COUNT = 270;
 
 const getFramePath = (index: number) => {
   const frameNumber = String(index + 1).padStart(3, '0');
-  return `/images/ezgif-frame-${frameNumber}.jpg`;
+  return `/images/ezgif-split/ezgif-frame-${frameNumber}.webp`;
 };
+
+// ─── Scroll timeline ──────────────────────────────────────────────────────────
+type PlaySegment = { type: 'play'; start: number; end: number; from: number; to: number };
+type HoldSegment = { type: 'hold'; start: number; end: number; frame: number };
+type Segment = PlaySegment | HoldSegment;
+
+const TIMELINE: Segment[] = [
+  { type: 'play', start: 0.00, end: 0.22, from: 0,   to: 70  },
+  { type: 'hold', start: 0.22, end: 0.35, frame: 70           },
+  { type: 'play', start: 0.35, end: 0.58, from: 71,  to: 150 },
+  { type: 'hold', start: 0.58, end: 0.72, frame: 150          },
+  { type: 'play', start: 0.72, end: 0.88, from: 151, to: 220 },
+  { type: 'play', start: 0.88, end: 1.00, from: 221, to: 269 },
+];
+
+function progressToFrame(p: number): number {
+  const clamped = Math.min(1, Math.max(0, p));
+  for (const seg of TIMELINE) {
+    if (clamped >= seg.start && clamped <= seg.end) {
+      if (seg.type === 'hold') return seg.frame;
+      const t = (clamped - seg.start) / (seg.end - seg.start);
+      return Math.round(seg.from + t * (seg.to - seg.from));
+    }
+  }
+  return FRAME_COUNT - 1;
+}
 
 // ─── Text overlays ────────────────────────────────────────────────────────────
 const OVERLAYS = [
   {
-    headline: 'Homelio.',
-    body: 'Der unsichtbare Wohnungsmarkt wird sichtbar.',
-  },
-  {
-    headline: 'Früh erkennen.',
+    headline: 'Früh erkannt.',
     body: 'Menschen denken über einen Umzug nach, bevor Wohnungen offiziell ausgeschrieben werden.',
   },
   {
-    headline: 'Intelligent verbinden.',
-    body: 'Haushalte, Wohnungen und Verwaltungen werden durch Matching-Logik miteinander verknüpft.',
+    headline: 'Intelligent verbunden.',
+    body: 'Homelio verknüpft Haushalte, Wohnungen und Verwaltungen durch Matching-Logik.',
   },
   {
-    headline: 'Verstehen. Verbinden. Vermitteln.',
-    body: 'Homelio macht versteckte Wohnchancen nutzbar.',
+    headline: 'Der unsichtbare Wohnungsmarkt wird sichtbar.',
+    body: 'Verstehen. Verbinden. Vermitteln.',
   },
 ] as const;
 
@@ -52,14 +74,16 @@ export default function HeadphoneScroll() {
     offset: ['start start', 'end end'],
   });
 
-  // Opacity curves — derived motion values, no re-renders
-  const opacity0  = useTransform(scrollYProgress, [0,    0.03, 0.18, 0.25], [0.8, 1, 1, 0]);
-  const opacity1  = useTransform(scrollYProgress, [0.22, 0.30, 0.48, 0.55], [0,   1, 1, 0]);
-  const opacity2  = useTransform(scrollYProgress, [0.52, 0.60, 0.78, 0.85], [0,   1, 1, 0]);
-  const opacity3  = useTransform(scrollYProgress, [0.82, 0.90, 0.97, 1.00], [0,   1, 1, 1]);
-  const opacities = [opacity0, opacity1, opacity2, opacity3] as const;
+  // Opacity curves tied to each segment's active window — derived motion values
+  // Overlay 0: visible during hold at 0.22–0.35
+  const opacity0 = useTransform(scrollYProgress, [0.20, 0.26, 0.31, 0.35], [0, 1, 1, 0]);
+  // Overlay 1: visible during hold at 0.58–0.72
+  const opacity1 = useTransform(scrollYProgress, [0.56, 0.62, 0.68, 0.72], [0, 1, 1, 0]);
+  // Overlay 2: visible during final segment 0.88–1.00, stays visible at end
+  const opacity2 = useTransform(scrollYProgress, [0.86, 0.92, 0.97, 1.00], [0, 1, 1, 1]);
+  const opacities = [opacity0, opacity1, opacity2] as const;
 
-  const cueOpacity = useTransform(scrollYProgress, [0, 0.07], [1, 0]);
+  const cueOpacity = useTransform(scrollYProgress, [0, 0.06], [1, 0]);
 
   // ─── Draw a frame to canvas ───────────────────────────────────────────────
   const drawFrame = useCallback((index: number) => {
@@ -84,7 +108,7 @@ export default function HeadphoneScroll() {
     ctx.drawImage(img, dx, dy, iw * scale, ih * scale);
   }, []);
 
-  // ─── Set canvas pixel dimensions + resize handler ─────────────────────────
+  // ─── Canvas sizing + resize handler ──────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -100,7 +124,7 @@ export default function HeadphoneScroll() {
     return () => window.removeEventListener('resize', resize);
   }, [drawFrame]);
 
-  // ─── Preload all frames ───────────────────────────────────────────────────
+  // ─── Preload all 270 frames ───────────────────────────────────────────────
   useEffect(() => {
     let loaded = 0;
     const images: HTMLImageElement[] = new Array(FRAME_COUNT);
@@ -112,25 +136,25 @@ export default function HeadphoneScroll() {
     };
 
     for (let i = 0; i < FRAME_COUNT; i++) {
-      const img    = new Image();
-      img.onload   = tick;
-      img.onerror  = tick; // don't stall if a frame is missing
-      img.src      = getFramePath(i);
-      images[i]    = img;
+      const img   = new Image();
+      img.onload  = tick;
+      img.onerror = tick; // gracefully skip any missing frame
+      img.src     = getFramePath(i);
+      images[i]   = img;
     }
 
     imagesRef.current = images;
   }, []);
 
-  // Draw frame 0 as soon as images are ready
+  // Draw first frame as soon as load completes
   useEffect(() => {
     if (isLoaded) drawFrame(0);
   }, [isLoaded, drawFrame]);
 
-  // ─── Map scroll progress → frame index ───────────────────────────────────
+  // ─── Scroll → timeline → frame ───────────────────────────────────────────
   useMotionValueEvent(scrollYProgress, 'change', (p) => {
     if (!isLoaded) return;
-    const idx = Math.min(FRAME_COUNT - 1, Math.max(0, Math.round(p * (FRAME_COUNT - 1))));
+    const idx = progressToFrame(p);
     currentFrameRef.current = idx;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => drawFrame(idx));
@@ -180,7 +204,7 @@ export default function HeadphoneScroll() {
           }}
         />
 
-        {/* Text overlays — all at the same position; opacity drives which is visible */}
+        {/* Text overlays — stacked at same position, opacity-driven */}
         {OVERLAYS.map((overlay, i) => (
           <motion.div
             key={i}
