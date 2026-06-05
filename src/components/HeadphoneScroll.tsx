@@ -13,7 +13,7 @@ const FRAME_COUNT = 270;
 
 const getFramePath = (index: number) => {
   const frameNumber = String(index + 1).padStart(3, '0');
-  return `/images/ezgif-split/ezgif-frame-${frameNumber}.webp`;
+  return `/images/ezgif-frame-${frameNumber}.webp`;
 };
 
 // ─── Scroll timeline ──────────────────────────────────────────────────────────
