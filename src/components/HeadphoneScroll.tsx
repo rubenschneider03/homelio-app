@@ -3,11 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
 
-// These timestamps are VIDEO TIME boundaries inside sequence.mp4.
-// They are NOT scroll progress values.
-// They mark the end of each cinematic video segment.
-// Verified via ffprobe keyframe scan: v1→v2 cut at 5.75s, v2→v3 cut at 11.5s.
-const TIMESTAMPS = [0, 5.75, 11.5, 17.5] as const;
+// Exact segment boundaries in sequence.mp4 (verified via ffprobe keyframe scan).
+const CUT_TIMESTAMPS = [0, 5.75, 11.5, 17.5] as const;
+
+// Held video.currentTime at each mainframe — one frame (≈0.05 s) before the cut
+// so the paused frame is still inside the current segment, not the next one.
+const PAUSE_TIMESTAMPS = [0, 5.65, 11.35, 17.5] as const;
+
+// Trigger thresholds: when video.currentTime crosses these values the mainframe
+// snaps to CUT_TIMESTAMPS. Earlier than CUT_TIMESTAMPS to compensate for
+// browser seek latency at 1.4× playback speed.
+const MAINFRAME_TRIGGER = [0, 5.35, 10.85, 17.5] as const;
 type SceneIdx = 0 | 1 | 2 | 3;
 
 // Overlay opacity per held scene (scene 0 stays light; 1-3 go fully milky)
@@ -55,13 +61,19 @@ export default function HeadphoneScroll() {
   const playForward = useCallback((target: SceneIdx) => {
     const video = videoRef.current;
     if (!video || playingRef.current) return;
-    if (target >= TIMESTAMPS.length) return;
+    if (target >= CUT_TIMESTAMPS.length) return;
 
     playingRef.current = true;
     setPlaying(true);
 
-    const fromTime    = video.currentTime;
-    const toTime      = TIMESTAMPS[target];
+    // Snap to the clean keyframe that opens this segment. The current overlay
+    // alpha (milky at any held scene) covers the tiny forward seek, so no
+    // frame from the next segment can flash through before playback begins.
+    const segStart    = CUT_TIMESTAMPS[sectionRef.current];
+    video.currentTime = segStart;
+
+    const fromTime    = segStart;
+    const toTime      = PAUSE_TIMESTAMPS[target];
     const totalRange  = toTime - fromTime;
     const startAlpha  = overlayAlpha.get();
     const targetAlpha = SCENE_ALPHA[target];
@@ -105,10 +117,9 @@ export default function HeadphoneScroll() {
       }
       overlayAlpha.set(alpha);
 
-      const frameTime = PLAY_RATE[target] / 24;
-      if (ct >= toTime - frameTime) {
+      if (ct >= MAINFRAME_TRIGGER[target] || videoRef.current.ended) {
         videoRef.current.pause();
-        videoRef.current.currentTime = toTime; // forward seek — arrives exactly, no backward stutter
+        videoRef.current.currentTime = toTime; // snap to exact cut boundary, not lagging currentTime
         overlayAlpha.set(targetAlpha);
         sectionRef.current = target;
         setSection(target);
@@ -149,7 +160,7 @@ export default function HeadphoneScroll() {
       } else {
         // Phase 2: seek instantly while covered, then fade back down
         if (!seeked) {
-          videoRef.current.currentTime = TIMESTAMPS[target];
+          videoRef.current.currentTime = PAUSE_TIMESTAMPS[target];
           sectionRef.current = target;
           setSection(target);
           seeked = true;
@@ -173,7 +184,7 @@ export default function HeadphoneScroll() {
   const navigate = useCallback((delta: 1 | -1) => {
     const s      = sectionRef.current;
     const target = (s + delta) as SceneIdx;
-    if (target < 0 || target >= TIMESTAMPS.length) return false;
+    if (target < 0 || target >= CUT_TIMESTAMPS.length) return false;
     if (delta > 0) playForward(target);
     else           playBackward(target);
     return true;
@@ -197,7 +208,7 @@ export default function HeadphoneScroll() {
       if (!inViewRef.current) return;
       const down = e.deltaY > 0;
       const s    = sectionRef.current;
-      if (down  && s >= TIMESTAMPS.length - 1) return;
+      if (down  && s >= CUT_TIMESTAMPS.length - 1) return;
       if (!down && s <= 0) return;
       e.preventDefault();
       if (playingRef.current) return;
@@ -216,7 +227,7 @@ export default function HeadphoneScroll() {
       if (Math.abs(dy) < 40) return;
       const down = dy > 0;
       const s    = sectionRef.current;
-      if (down  && s >= TIMESTAMPS.length - 1) return;
+      if (down  && s >= CUT_TIMESTAMPS.length - 1) return;
       if (!down && s <= 0) return;
       e.preventDefault();
       if (playingRef.current) return;
@@ -258,7 +269,7 @@ export default function HeadphoneScroll() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const seek = () => { video.currentTime = TIMESTAMPS[0]; };
+    const seek = () => { video.currentTime = CUT_TIMESTAMPS[0]; };
     if (video.readyState >= 1) seek();
     else video.addEventListener('loadedmetadata', seek, { once: true });
   }, []);
@@ -319,7 +330,7 @@ export default function HeadphoneScroll() {
 
       {/* Section dots */}
       <div className="absolute right-7 lg:right-9 top-1/2 -translate-y-1/2 flex flex-col gap-3 pointer-events-none">
-        {TIMESTAMPS.map((_, i) => (
+        {CUT_TIMESTAMPS.map((_, i) => (
           <div
             key={i}
             className="rounded-full transition-all duration-500"
