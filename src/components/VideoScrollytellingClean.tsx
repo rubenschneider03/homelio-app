@@ -141,9 +141,9 @@ export default function VideoScrollytellingClean() {
   const inViewRef   = useRef(false);
   const touchStartY = useRef(0);
 
-  const [mainframe,     setMainframe]     = useState<MFIdx>(0);
-  const [transitioning, setTransitioning] = useState(false);
-  const [activeVideo,   setActiveVideo]   = useState<VidIdx>(0);
+  const [mainframe,          setMainframe]          = useState<MFIdx>(0);
+  const [transitioning,      setTransitioning]      = useState(false);
+  const [displayVideoIndex,  setDisplayVideoIndex]  = useState<VidIdx>(0);
 
   // Mirror state into refs so event handlers always read the latest value
   // without becoming stale closures.
@@ -162,6 +162,14 @@ export default function VideoScrollytellingClean() {
   const textY         = useTransform(textAlphaMv, [0, 1], [14, 0]);
 
   const [textMF, setTextMF] = useState<MFIdx>(0);
+
+  // ── Dev-only debug tick (updates displayVideoIndex video's currentTime in overlay) ─
+  const [, setDebugTick] = useState(0);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    const id = setInterval(() => setDebugTick(t => t + 1), 100);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Init: seek video 0 to frame 0 ────────────────────────────────────────────
   useEffect(() => {
@@ -191,7 +199,7 @@ export default function VideoScrollytellingClean() {
     const fromBlur     = overlayBlurMv.get();
     video.currentTime  = 0;
     video.playbackRate = PLAYBACK_RATE;
-    setActiveVideo(vIdx);
+    setDisplayVideoIndex(vIdx);
     setTransitioning(true);
     overlayAlpha.set(OVERLAY_PEAK);
 
@@ -226,7 +234,9 @@ export default function VideoScrollytellingClean() {
         textAlphaMv.set(1);
         if (!textSwitched) setTextMF(target);
         setMainframe(target);
-        setActiveVideo(MF_VIDEO[target] as VidIdx);
+        // displayVideoIndex stays as vIdx — the video that just played.
+        // MF1 = end of video 0, MF2 = end of video 1, MF3 = end of video 2.
+        // The next video becomes active only at the START of the next transition.
         setTransitioning(false);
         rafRef.current = null;
       } else {
@@ -287,7 +297,7 @@ export default function VideoScrollytellingClean() {
               ? 0
               : isFinite(video.duration) ? video.duration - HOLD_OFFSET : 0;
           video.currentTime = holdTime;
-          setActiveVideo(tVidIdx);
+          setDisplayVideoIndex(tVidIdx);
           setMainframe(target);
           setTextMF(target);
           seeked = true;
@@ -399,7 +409,7 @@ export default function VideoScrollytellingClean() {
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: activeVideo === 0 ? 1 : 0, zIndex: activeVideo === 0 ? 1 : 0 }}
+        style={{ opacity: displayVideoIndex === 0 ? 1 : 0, zIndex: displayVideoIndex === 0 ? 1 : 0 }}
       />
       <video
         ref={v1Ref}
@@ -408,7 +418,7 @@ export default function VideoScrollytellingClean() {
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: activeVideo === 1 ? 1 : 0, zIndex: activeVideo === 1 ? 1 : 0 }}
+        style={{ opacity: displayVideoIndex === 1 ? 1 : 0, zIndex: displayVideoIndex === 1 ? 1 : 0 }}
       />
       <video
         ref={v2Ref}
@@ -417,7 +427,7 @@ export default function VideoScrollytellingClean() {
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: activeVideo === 2 ? 1 : 0, zIndex: activeVideo === 2 ? 1 : 0 }}
+        style={{ opacity: displayVideoIndex === 2 ? 1 : 0, zIndex: displayVideoIndex === 2 ? 1 : 0 }}
       />
 
       {/* ── Milky glass overlay (blur-driven, MF1-3) ── */}
@@ -516,6 +526,20 @@ export default function VideoScrollytellingClean() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── DEV-ONLY debug overlay ── remove before shipping ── */}
+      {process.env.NODE_ENV === 'development' && (() => {
+        const dvRef = displayVideoIndex === 0 ? v0Ref : displayVideoIndex === 1 ? v1Ref : v2Ref;
+        return (
+          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 9999, background: 'rgba(0,0,0,0.75)', color: '#00ff88', fontFamily: 'monospace', fontSize: 11, padding: '6px 10px', lineHeight: 1.8, pointerEvents: 'none' }}>
+            <div>mainframe: {mainframe}</div>
+            <div>displayVideoIndex: {displayVideoIndex}</div>
+            <div>transitioning: {String(transitioning)}</div>
+            <div>ct: {dvRef.current?.currentTime.toFixed(3) ?? '—'}</div>
+            <div>dur: {dvRef.current?.duration.toFixed(3) ?? '—'}</div>
+          </div>
+        );
+      })()}
 
     </div>
   );
