@@ -1,252 +1,358 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-import {
-  useScroll,
-  useTransform,
-  useMotionValueEvent,
-  motion,
-} from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
 
-// ─── Frame manifest ───────────────────────────────────────────────────────────
-const FRAME_COUNT = 270;
+// These timestamps are VIDEO TIME boundaries inside sequence.mp4.
+// They are NOT scroll progress values.
+// They mark the end of each cinematic video segment.
+// Verified via ffprobe keyframe scan: v1→v2 cut at 5.75s, v2→v3 cut at 11.5s.
+const TIMESTAMPS = [0, 5.75, 11.5, 17.5] as const;
+type SceneIdx = 0 | 1 | 2 | 3;
 
-const getFramePath = (index: number) => {
-  const frameNumber = String(index + 1).padStart(3, '0');
-  return `/images/ezgif-frame-${frameNumber}.webp`;
-};
+// Overlay opacity per held scene (scene 0 stays light; 1-3 go fully milky)
+const SCENE_ALPHA: Record<SceneIdx, number> = { 0: 0.14, 1: 0.42, 2: 0.42, 3: 0.42 };
+const MIN_ALPHA  = 0.06; // during playback
+// Departure fade duration in ms (real time, not video time)
+const FADE_MS: Record<SceneIdx, number> = { 0: 250, 1: 1800, 2: 1800, 3: 250 };
+// Where the ramp-up back to milky starts (fraction of segment)
+const RAMP_START = 0.70;
+const PLAY_RATE: Record<SceneIdx, number> = { 0: 1, 1: 1.4, 2: 1.4, 3: 1.4 };
 
-// ─── Scroll timeline ──────────────────────────────────────────────────────────
-type PlaySegment = { type: 'play'; start: number; end: number; from: number; to: number };
-type HoldSegment = { type: 'hold'; start: number; end: number; frame: number };
-type Segment = PlaySegment | HoldSegment;
 
-const TIMELINE: Segment[] = [
-  { type: 'play', start: 0.00, end: 0.22, from: 0,   to: 70  },
-  { type: 'hold', start: 0.22, end: 0.35, frame: 70           },
-  { type: 'play', start: 0.35, end: 0.58, from: 71,  to: 150 },
-  { type: 'hold', start: 0.58, end: 0.72, frame: 150          },
-  { type: 'play', start: 0.72, end: 0.88, from: 151, to: 220 },
-  { type: 'play', start: 0.88, end: 1.00, from: 221, to: 269 },
-];
-
-function progressToFrame(p: number): number {
-  const clamped = Math.min(1, Math.max(0, p));
-  for (const seg of TIMELINE) {
-    if (clamped >= seg.start && clamped <= seg.end) {
-      if (seg.type === 'hold') return seg.frame;
-      const t = (clamped - seg.start) / (seg.end - seg.start);
-      return Math.round(seg.from + t * (seg.to - seg.from));
-    }
-  }
-  return FRAME_COUNT - 1;
-}
-
-// ─── Text overlays ────────────────────────────────────────────────────────────
-const OVERLAYS = [
-  {
-    headline: 'Früh erkannt.',
-    body: 'Menschen denken über einen Umzug nach, bevor Wohnungen offiziell ausgeschrieben werden.',
-  },
-  {
-    headline: 'Intelligent verbunden.',
-    body: 'Homelio verknüpft Haushalte, Wohnungen und Verwaltungen durch Matching-Logik.',
-  },
-  {
-    headline: 'Der unsichtbare Wohnungsmarkt wird sichtbar.',
-    body: 'Verstehen. Verbinden. Vermitteln.',
-  },
+// ─── Scene copy ────────────────────────────────────────────────────────────────
+const SCENES = [
+  { headline: null,        body: null },
+  { headline: 'Früh erkannt.',
+    body:     'Menschen denken über einen Umzug nach, bevor Wohnungen offiziell ausgeschrieben werden.' },
+  { headline: 'Intelligent verbunden.',
+    body:     'Homelio verknüpft Haushalte, Wohnungen und Verwaltungen durch Matching-Logik.' },
+  { headline: 'Der unsichtbare Wohnungsmarkt wird sichtbar.',
+    body:     'Verstehen. Verbinden. Vermitteln.' },
 ] as const;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function easeInOut(t: number) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function easeOut(t: number)   { return 1-(1-t)*(1-t); }
+function easeIn(t: number)    { return t*t; }
+
 export default function HeadphoneScroll() {
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const canvasRef       = useRef<HTMLCanvasElement>(null);
-  const imagesRef       = useRef<HTMLImageElement[]>([]);
-  const currentFrameRef = useRef(0);
-  const rafRef          = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef     = useRef<HTMLVideoElement>(null);
+  const sectionRef   = useRef<SceneIdx>(0);
+  const playingRef   = useRef(false);
+  const rafRef       = useRef<number | null>(null);
+  const inViewRef    = useRef(false);
+  const touchStartY  = useRef(0);
 
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadPct,  setLoadPct]  = useState(0);
+  const [section, setSection] = useState<SceneIdx>(0);
+  const [playing, setPlaying] = useState(false); // used only to hide text during playback
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end'],
-  });
+  const overlayAlpha = useMotionValue(SCENE_ALPHA[0]);
+  const overlayBg    = useTransform(overlayAlpha, v => `rgba(250,248,244,${v.toFixed(3)})`);
+  const overlayBlur  = useTransform(overlayAlpha, v => `blur(${(v * 14.3).toFixed(1)}px)`);
 
-  // Opacity curves tied to each segment's active window — derived motion values
-  // Overlay 0: visible during hold at 0.22–0.35
-  const opacity0 = useTransform(scrollYProgress, [0.20, 0.26, 0.31, 0.35], [0, 1, 1, 0]);
-  // Overlay 1: visible during hold at 0.58–0.72
-  const opacity1 = useTransform(scrollYProgress, [0.56, 0.62, 0.68, 0.72], [0, 1, 1, 0]);
-  // Overlay 2: visible during final segment 0.88–1.00, stays visible at end
-  const opacity2 = useTransform(scrollYProgress, [0.86, 0.92, 0.97, 1.00], [0, 1, 1, 1]);
-  const opacities = [opacity0, opacity1, opacity2] as const;
+  // ── Forward: real video playback with alpha curve ─────────────────────────────
+  const playForward = useCallback((target: SceneIdx) => {
+    const video = videoRef.current;
+    if (!video || playingRef.current) return;
+    if (target >= TIMESTAMPS.length) return;
 
-  const cueOpacity = useTransform(scrollYProgress, [0, 0.06], [1, 0]);
+    playingRef.current = true;
+    setPlaying(true);
 
-  // ─── Draw a frame to canvas ───────────────────────────────────────────────
-  const drawFrame = useCallback((index: number) => {
-    const canvas = canvasRef.current;
-    const ctx    = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    const fromTime    = video.currentTime;
+    const toTime      = TIMESTAMPS[target];
+    const totalRange  = toTime - fromTime;
+    const startAlpha  = overlayAlpha.get();
+    const targetAlpha = SCENE_ALPHA[target];
+    const fadeDurMs   = FADE_MS[sectionRef.current];
+    const startMs     = performance.now();
 
-    const img = imagesRef.current[index];
-    if (!img?.complete || !img.naturalWidth) return;
-
-    const cw = canvas.width;
-    const ch = canvas.height;
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
-
-    // object-contain: scale to fit, centre
-    const scale = Math.min(cw / iw, ch / ih);
-    const dx    = (cw - iw * scale) / 2;
-    const dy    = (ch - ih * scale) / 2;
-
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, dx, dy, iw * scale, ih * scale);
-  }, []);
-
-  // ─── Canvas sizing + resize handler ──────────────────────────────────────
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const resize = () => {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-      drawFrame(currentFrameRef.current);
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [drawFrame]);
-
-  // ─── Preload all 270 frames ───────────────────────────────────────────────
-  useEffect(() => {
-    let loaded = 0;
-    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
-
-    const tick = () => {
-      loaded++;
-      setLoadPct(Math.round((loaded / FRAME_COUNT) * 100));
-      if (loaded === FRAME_COUNT) setIsLoaded(true);
-    };
-
-    for (let i = 0; i < FRAME_COUNT; i++) {
-      const img   = new Image();
-      img.onload  = tick;
-      img.onerror = tick; // gracefully skip any missing frame
-      img.src     = getFramePath(i);
-      images[i]   = img;
+    if (video.currentTime >= toTime) {
+      video.currentTime  = toTime;
+      overlayAlpha.set(targetAlpha);
+      sectionRef.current = target;
+      setSection(target);
+      playingRef.current = false;
+      setPlaying(false);
+      return;
     }
 
-    imagesRef.current = images;
+    video.playbackRate = PLAY_RATE[target];
+    video.play().catch(() => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      overlayAlpha.set(SCENE_ALPHA[sectionRef.current]);
+      playingRef.current = false;
+      setPlaying(false);
+    });
+
+    const monitor = (now: number) => {
+      if (!videoRef.current) return;
+      const ct          = videoRef.current.currentTime;
+      const elapsed     = now - startMs;
+      const segProgress = Math.min(1, (ct - fromTime) / totalRange);
+
+      // Alpha curve: departure fade → hold clear → ramp up to milky
+      let alpha: number;
+      if (segProgress >= RAMP_START) {
+        const t = (segProgress - RAMP_START) / (1 - RAMP_START);
+        alpha = MIN_ALPHA + (targetAlpha - MIN_ALPHA) * easeIn(t);
+      } else if (elapsed < fadeDurMs) {
+        const t = elapsed / fadeDurMs;
+        alpha = startAlpha + (MIN_ALPHA - startAlpha) * easeOut(t);
+      } else {
+        alpha = MIN_ALPHA;
+      }
+      overlayAlpha.set(alpha);
+
+      const frameTime = PLAY_RATE[target] / 24;
+      if (ct >= toTime - frameTime) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = toTime; // forward seek — arrives exactly, no backward stutter
+        overlayAlpha.set(targetAlpha);
+        sectionRef.current = target;
+        setSection(target);
+        playingRef.current = false;
+        setPlaying(false);
+        rafRef.current = null;
+      } else {
+        rafRef.current = requestAnimationFrame(monitor);
+      }
+    };
+    rafRef.current = requestAnimationFrame(monitor);
+  }, [overlayAlpha]);
+
+  // ── Backward: fade to opaque → instant seek (hidden) → fade back to clear ─────
+  const playBackward = useCallback((target: SceneIdx) => {
+    const video = videoRef.current;
+    if (!video || playingRef.current) return;
+    playingRef.current = true;
+    setPlaying(true);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    video.pause();
+
+    const startAlpha  = overlayAlpha.get();
+    const targetAlpha = SCENE_ALPHA[target];
+    const fadeUpMs    = 260;  // milky fade-in
+    const fadeDownMs  = 520;  // clear fade-out to reveal previous scene
+    const startMs     = performance.now();
+    let seeked        = false;
+
+    const monitor = (now: number) => {
+      if (!videoRef.current) return;
+      const elapsed = now - startMs;
+
+      if (elapsed < fadeUpMs) {
+        // Phase 1: quickly fade up to fully opaque
+        const t = elapsed / fadeUpMs;
+        overlayAlpha.set(startAlpha + (0.98 - startAlpha) * easeIn(t));
+      } else {
+        // Phase 2: seek instantly while covered, then fade back down
+        if (!seeked) {
+          videoRef.current.currentTime = TIMESTAMPS[target];
+          sectionRef.current = target;
+          setSection(target);
+          seeked = true;
+        }
+        const t = Math.min(1, (elapsed - fadeUpMs) / fadeDownMs);
+        overlayAlpha.set(0.98 + (targetAlpha - 0.98) * easeOut(t));
+        if (t >= 1) {
+          overlayAlpha.set(targetAlpha);
+          playingRef.current = false;
+          setPlaying(false);
+          rafRef.current = null;
+          return;
+        }
+      }
+      rafRef.current = requestAnimationFrame(monitor);
+    };
+    rafRef.current = requestAnimationFrame(monitor);
+  }, [overlayAlpha]);
+
+  // ── Navigate ──────────────────────────────────────────────────────────────────
+  const navigate = useCallback((delta: 1 | -1) => {
+    const s      = sectionRef.current;
+    const target = (s + delta) as SceneIdx;
+    if (target < 0 || target >= TIMESTAMPS.length) return false;
+    if (delta > 0) playForward(target);
+    else           playBackward(target);
+    return true;
+  }, [playForward, playBackward]);
+
+  // ── Visibility observer ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { inViewRef.current = e.isIntersecting; },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
-  // Draw first frame as soon as load completes
+  // ── Wheel ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isLoaded) drawFrame(0);
-  }, [isLoaded, drawFrame]);
+    const onWheel = (e: WheelEvent) => {
+      if (!inViewRef.current) return;
+      const down = e.deltaY > 0;
+      const s    = sectionRef.current;
+      if (down  && s >= TIMESTAMPS.length - 1) return;
+      if (!down && s <= 0) return;
+      e.preventDefault();
+      if (playingRef.current) return;
+      navigate(down ? 1 : -1);
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [navigate]);
 
-  // ─── Scroll → timeline → frame ───────────────────────────────────────────
-  useMotionValueEvent(scrollYProgress, 'change', (p) => {
-    if (!isLoaded) return;
-    const idx = progressToFrame(p);
-    currentFrameRef.current = idx;
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => drawFrame(idx));
-  });
+  // ── Touch ─────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
+    const onEnd   = (e: TouchEvent) => {
+      if (!inViewRef.current) return;
+      const dy = touchStartY.current - e.changedTouches[0].clientY;
+      if (Math.abs(dy) < 40) return;
+      const down = dy > 0;
+      const s    = sectionRef.current;
+      if (down  && s >= TIMESTAMPS.length - 1) return;
+      if (!down && s <= 0) return;
+      e.preventDefault();
+      if (playingRef.current) return;
+      navigate(down ? 1 : -1);
+    };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchend',   onEnd,   { passive: false });
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchend',   onEnd);
+    };
+  }, [navigate]);
+
+  // ── Keyboard ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!inViewRef.current) return;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); navigate(1);  }
+      if (e.key === 'ArrowUp'   || e.key === 'PageUp')   { e.preventDefault(); navigate(-1); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
+
+  // ── Release lock if tab is hidden mid-transition (browser throttles/pauses RAF) ─
+  useEffect(() => {
+    const onHide = () => {
+      if (!document.hidden || !playingRef.current) return;
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      if (videoRef.current) videoRef.current.pause();
+      playingRef.current = false;
+      setPlaying(false);
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, []);
+
+  // ── Seek to first frame on load ───────────────────────────────────────────────
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const seek = () => { video.currentTime = TIMESTAMPS[0]; };
+    if (video.readyState >= 1) seek();
+    else video.addEventListener('loadedmetadata', seek, { once: true });
+  }, []);
+
+  // ── Cleanup ───────────────────────────────────────────────────────────────────
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+
+  const scene = SCENES[section];
 
   return (
-    <div ref={containerRef} style={{ height: '400vh' }}>
+    <div ref={containerRef} className="relative h-screen overflow-hidden" style={{ backgroundColor: 'rgba(250,248,244,1)' }}>
 
-      {/* Sticky full-viewport panel */}
-      <div
-        className="sticky top-0 h-screen w-full overflow-hidden"
-        style={{ backgroundColor: '#050505' }}
-      >
+      {/* 1080p video */}
+      <video
+        ref={videoRef}
+        src="/images/ezgif-split/sequence.mp4"
+        preload="auto"
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
 
-        {/* Loading bar */}
-        {!isLoaded && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5">
-            <div
-              className="w-52 h-px overflow-hidden"
-              style={{ backgroundColor: 'rgba(255,255,255,0.07)' }}
-            >
-              <div
-                className="h-full"
-                style={{
-                  width:      `${loadPct}%`,
-                  background: 'rgba(255,255,255,0.3)',
-                  transition: 'width 80ms linear',
-                }}
-              />
-            </div>
-            <span
-              className="text-xs tracking-[0.25em] uppercase tabular-nums"
-              style={{ color: 'rgba(255,255,255,0.18)' }}
-            >
-              {loadPct}%
-            </span>
-          </div>
-        )}
+      {/* Milky glass overlay — driven entirely by overlayAlpha motion value */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: overlayBg, backdropFilter: overlayBlur }}
+      />
 
-        {/* Image-sequence canvas */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0"
-          style={{
-            opacity:    isLoaded ? 1 : 0,
-            transition: 'opacity 0.6s ease',
-          }}
-        />
 
-        {/* Text overlays — stacked at same position, opacity-driven */}
-        {OVERLAYS.map((overlay, i) => (
+      {/* Scene text */}
+      <AnimatePresence mode="wait">
+        {scene.headline && !playing && (
           <motion.div
-            key={i}
-            className="absolute bottom-24 md:bottom-28 left-8 md:left-16 max-w-sm md:max-w-lg pointer-events-none"
-            style={{ opacity: opacities[i] }}
+            key={section}
+            className="absolute bottom-20 sm:bottom-24 lg:bottom-28 left-0 right-0 px-6 lg:pl-16 lg:pr-8 pointer-events-none"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.55, ease: [0.25, 0, 0, 1] }}
           >
             <h2
-              className="font-light tracking-tight leading-[1.05] mb-3 text-4xl md:text-6xl"
-              style={{
-                fontFamily: 'var(--font-instrument-serif)',
-                color:      'rgba(255,255,255,0.92)',
-              }}
+              className="font-light tracking-tight leading-[1.05] mb-3
+                         text-4xl sm:text-5xl lg:text-7xl text-center lg:text-left"
+              style={{ fontFamily: 'var(--font-instrument-serif)', color: 'rgba(20,18,15,0.90)' }}
             >
-              {overlay.headline}
+              {scene.headline}
             </h2>
             <p
-              className="text-sm md:text-base font-light leading-relaxed"
-              style={{ color: 'rgba(255,255,255,0.50)' }}
+              className="text-sm sm:text-base lg:text-lg font-light leading-relaxed
+                         text-center lg:text-left max-w-sm lg:max-w-lg mx-auto lg:mx-0"
+              style={{ color: 'rgba(20,18,15,0.55)' }}
             >
-              {overlay.body}
+              {scene.body}
             </p>
           </motion.div>
-        ))}
+        )}
+      </AnimatePresence>
 
-        {/* Scroll cue */}
-        <motion.div
-          className="absolute bottom-9 right-10 flex flex-col items-center gap-2 pointer-events-none"
-          style={{ opacity: cueOpacity }}
-        >
-          <span
-            className="text-xs tracking-[0.22em] uppercase"
-            style={{ color: 'rgba(255,255,255,0.2)' }}
-          >
-            Scroll
-          </span>
+      {/* Section dots */}
+      <div className="absolute right-7 lg:right-9 top-1/2 -translate-y-1/2 flex flex-col gap-3 pointer-events-none">
+        {TIMESTAMPS.map((_, i) => (
           <div
-            className="w-px h-9"
-            style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.18), transparent)' }}
+            key={i}
+            className="rounded-full transition-all duration-500"
+            style={{
+              width:      i === section ? 7 : 4,
+              height:     i === section ? 7 : 4,
+              background: i === section ? 'rgba(20,18,15,0.75)' : 'rgba(20,18,15,0.22)',
+            }}
           />
-        </motion.div>
-
+        ))}
       </div>
+
+      {/* Scroll cue */}
+      <AnimatePresence>
+        {section === 0 && !playing && (
+          <motion.div
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <span className="text-xs tracking-[0.22em] uppercase" style={{ color: 'rgba(20,18,15,0.28)' }}>
+              Scroll
+            </span>
+            <div
+              className="w-px h-8"
+              style={{ background: 'linear-gradient(to bottom, rgba(20,18,15,0.20), transparent)' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
