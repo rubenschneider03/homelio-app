@@ -26,6 +26,18 @@ const OVERLAY_RAMP = 0.30;
 /** Maximum backdrop-blur in px (applied at OVERLAY_PEAK, 0 at midpoint). */
 const BLUR_MAX = 8;
 
+/** Peak opacity of the dedicated Mainframe 1 sharp white veil (no blur). */
+const MF0_VEIL_PEAK = 0.32;
+
+/** Progress fraction (0–1) at which mainframe text starts fading in during approach. */
+const TEXT_FADE_IN_START = 0.65;
+
+/** Progress fraction (0–1) at which mainframe text reaches full opacity. */
+const TEXT_FADE_IN_END   = 0.92;
+
+/** Progress fraction (0–1) by which text is fully faded out at the start of a transition. */
+const TEXT_FADE_OUT_END  = 0.20;
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  VIDEO SOURCES  ← edit paths here
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,6 +115,18 @@ function alphaForProgress(p: number): number {
   return 0;
 }
 
+/**
+ * Blur amount (px) as a function of video progress and the starting blur of
+ * the FROM mainframe.  Mainframe 1 (startBlur=0) stays blur-free at the
+ * beginning of its transition; all others (startBlur=BLUR_MAX) ramp down
+ * and back up symmetrically.
+ */
+function blurForProgress(p: number, startBlur: number): number {
+  if (p <= OVERLAY_RAMP)       return startBlur * (1 - p / OVERLAY_RAMP);
+  if (p >= 1 - OVERLAY_RAMP)   return BLUR_MAX  * ((p - (1 - OVERLAY_RAMP)) / OVERLAY_RAMP);
+  return 0;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -128,12 +152,16 @@ export default function VideoScrollytellingClean() {
   mainframeRef.current     = mainframe;
   transitioningRef.current = transitioning;
 
-  const overlayAlpha = useMotionValue(OVERLAY_PEAK);
-  const overlayBg    = useTransform(overlayAlpha, a => `rgba(255,255,255,${a.toFixed(3)})`);
-  const overlayBlur  = useTransform(
-    overlayAlpha,
-    a => `blur(${(clamp(a / OVERLAY_PEAK, 0, 1) * BLUR_MAX).toFixed(1)}px)`,
-  );
+  const overlayAlpha  = useMotionValue(OVERLAY_PEAK);
+  const overlayBlurMv = useMotionValue(0);              // 0 at MF0 (sharp), BLUR_MAX at MF1-3
+  const overlayBg     = useTransform(overlayAlpha,  a => `rgba(255,255,255,${a.toFixed(3)})`);
+  const overlayBlur   = useTransform(overlayBlurMv, b => `blur(${b.toFixed(1)}px)`);
+  const mf0VeilMv     = useMotionValue(MF0_VEIL_PEAK); // peak at MF0, 0 at MF1-3
+  const mf0VeilBg     = useTransform(mf0VeilMv,     a => `rgba(255,255,255,${a.toFixed(3)})`);
+  const textAlphaMv   = useMotionValue(1);              // 1 = visible, 0 = hidden
+  const textY         = useTransform(textAlphaMv, [0, 1], [14, 0]);
+
+  const [textMF, setTextMF] = useState<MFIdx>(0);
 
   // ── Init: seek video 0 to frame 0 ────────────────────────────────────────────
   useEffect(() => {
@@ -160,12 +188,14 @@ export default function VideoScrollytellingClean() {
 
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
+    const fromBlur     = overlayBlurMv.get();
     video.currentTime  = 0;
     video.playbackRate = PLAYBACK_RATE;
     setActiveVideo(vIdx);
     setTransitioning(true);
     overlayAlpha.set(OVERLAY_PEAK);
 
+    let textSwitched = false;
     const monitor = () => {
       const v = (vIdx === 0 ? v0Ref : vIdx === 1 ? v1Ref : v2Ref).current;
       if (!v) return;
@@ -175,11 +205,26 @@ export default function VideoScrollytellingClean() {
       const progress = clamp(ct / holdTime, 0, 1);
 
       overlayAlpha.set(alphaForProgress(progress));
+      overlayBlurMv.set(blurForProgress(progress, fromBlur));
+      if (from === 0) mf0VeilMv.set(alphaForProgress(progress) * (MF0_VEIL_PEAK / OVERLAY_PEAK));
+
+      if (progress < TEXT_FADE_OUT_END) {
+        textAlphaMv.set(1 - progress / TEXT_FADE_OUT_END);
+      } else if (progress >= TEXT_FADE_IN_START) {
+        if (!textSwitched) { setTextMF(target); textSwitched = true; }
+        textAlphaMv.set(clamp((progress - TEXT_FADE_IN_START) / (TEXT_FADE_IN_END - TEXT_FADE_IN_START), 0, 1));
+      } else {
+        textAlphaMv.set(0);
+      }
 
       if (ct >= holdTime || v.ended) {
         v.pause();
         v.currentTime = holdTime;
         overlayAlpha.set(OVERLAY_PEAK);
+        overlayBlurMv.set(BLUR_MAX);
+        if (from === 0) mf0VeilMv.set(0);
+        textAlphaMv.set(1);
+        if (!textSwitched) setTextMF(target);
         setMainframe(target);
         setActiveVideo(MF_VIDEO[target] as VidIdx);
         setTransitioning(false);
@@ -194,8 +239,11 @@ export default function VideoScrollytellingClean() {
     }).catch(() => {
       setTransitioning(false);
       overlayAlpha.set(OVERLAY_PEAK);
+      overlayBlurMv.set(from === 0 ? 0 : BLUR_MAX);
+      if (from === 0) mf0VeilMv.set(MF0_VEIL_PEAK);
+      textAlphaMv.set(1);
     });
-  }, [overlayAlpha]);
+  }, [overlayAlpha, overlayBlurMv, mf0VeilMv, textAlphaMv]);
 
   // ── Backward transition ───────────────────────────────────────────────────────
   //
@@ -214,6 +262,8 @@ export default function VideoScrollytellingClean() {
     setTransitioning(true);
 
     const startAlpha = overlayAlpha.get();
+    const startBlur  = overlayBlurMv.get();
+    const destBlur   = target === 0 ? 0 : BLUR_MAX;
     const COVER      = 0.95;
     const RISE_MS    = 220;
     const FALL_MS    = 440;
@@ -225,9 +275,12 @@ export default function VideoScrollytellingClean() {
 
       if (elapsed < RISE_MS) {
         // Phase 1: rapidly fade up to opaque — hides the seek
-        overlayAlpha.set(startAlpha + (COVER - startAlpha) * clamp(elapsed / RISE_MS, 0, 1));
+        const r = clamp(elapsed / RISE_MS, 0, 1);
+        overlayAlpha.set(startAlpha + (COVER    - startAlpha) * r);
+        overlayBlurMv.set(startBlur + (BLUR_MAX - startBlur)  * r);
+        textAlphaMv.set(1 - r);
       } else {
-        // Phase 2: seek while covered, then fade back to mainframe alpha
+        // Phase 2: seek while covered, then fade back to mainframe alpha/blur
         if (!seeked) {
           const holdTime =
             target === 0
@@ -236,12 +289,19 @@ export default function VideoScrollytellingClean() {
           video.currentTime = holdTime;
           setActiveVideo(tVidIdx);
           setMainframe(target);
+          setTextMF(target);
           seeked = true;
         }
         const t = clamp((elapsed - RISE_MS) / FALL_MS, 0, 1);
-        overlayAlpha.set(COVER + (OVERLAY_PEAK - COVER) * t);
+        overlayAlpha.set(COVER    + (OVERLAY_PEAK - COVER)    * t);
+        overlayBlurMv.set(BLUR_MAX + (destBlur    - BLUR_MAX) * t);
+        if (target === 0) mf0VeilMv.set(MF0_VEIL_PEAK * t);
+        textAlphaMv.set(t);
         if (t >= 1) {
           overlayAlpha.set(OVERLAY_PEAK);
+          overlayBlurMv.set(destBlur);
+          if (target === 0) mf0VeilMv.set(MF0_VEIL_PEAK);
+          textAlphaMv.set(1);
           setTransitioning(false);
           rafRef.current = null;
           return;
@@ -251,7 +311,7 @@ export default function VideoScrollytellingClean() {
     };
 
     rafRef.current = requestAnimationFrame(monitor);
-  }, [overlayAlpha]);
+  }, [overlayAlpha, overlayBlurMv, mf0VeilMv, textAlphaMv]);
 
   // ── Intersection observer ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -322,7 +382,7 @@ export default function VideoScrollytellingClean() {
   // ── Cleanup ───────────────────────────────────────────────────────────────────
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
-  const mf = MAINFRAMES[mainframe];
+  const mf = MAINFRAMES[textMF];
 
   return (
     <div
@@ -360,7 +420,7 @@ export default function VideoScrollytellingClean() {
         style={{ opacity: activeVideo === 2 ? 1 : 0, zIndex: activeVideo === 2 ? 1 : 0 }}
       />
 
-      {/* ── Milky glass overlay ── */}
+      {/* ── Milky glass overlay (blur-driven, MF1-3) ── */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -371,45 +431,46 @@ export default function VideoScrollytellingClean() {
         }}
       />
 
+      {/* ── Mainframe 1 dedicated sharp white veil (no blur, no filter) ── */}
+      {/* ↑ Veil strength : MF0_VEIL_PEAK constant (top of file)        ── */}
+      {/* ↑ Fade curve    : alphaForProgress() scaled to MF0_VEIL_PEAK  ── */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 10, background: mf0VeilBg }}
+      />
+
       {/* ── Mainframe text ── */}
-      <AnimatePresence mode="wait">
-        {!transitioning && (
-          <motion.div
-            key={mainframe}
-            className="absolute inset-0 flex flex-col justify-end pointer-events-none"
-            style={{ zIndex: 3 }}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.55, ease: [0.25, 0, 0, 1] }}
+      {/* ↑ Fade start : TEXT_FADE_IN_START constant (top of file) ── */}
+      {/* ↑ Fade end   : TEXT_FADE_IN_END constant (top of file)   ── */}
+      <motion.div
+        className="absolute inset-0 flex flex-col justify-end pointer-events-none"
+        style={{ zIndex: 20, opacity: textAlphaMv, y: textY }}
+      >
+        <div className="px-6 pb-20 lg:px-16 lg:pb-28 max-w-2xl">
+          <p
+            className="text-xs tracking-[0.22em] uppercase mb-3"
+            style={{ color: 'rgba(255,255,255,0.42)' }}
           >
-            <div className="px-6 pb-20 lg:px-16 lg:pb-28 max-w-2xl">
-              <p
-                className="text-xs tracking-[0.22em] uppercase mb-3"
-                style={{ color: 'rgba(255,255,255,0.42)' }}
-              >
-                {mf.label}
-              </p>
-              <h2
-                className="font-light leading-[1.06] mb-4"
-                style={{
-                  fontFamily: 'var(--font-instrument-serif)',
-                  color:      'rgba(255,255,255,0.92)',
-                  fontSize:   'clamp(2rem, 5vw, 3.75rem)',
-                }}
-              >
-                {mf.title}
-              </h2>
-              <p
-                className="text-sm sm:text-base font-light leading-relaxed max-w-sm"
-                style={{ color: 'rgba(255,255,255,0.56)' }}
-              >
-                {mf.body}
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {mf.label}
+          </p>
+          <h2
+            className="font-light leading-[1.06] mb-4"
+            style={{
+              fontFamily: 'var(--font-instrument-serif)',
+              color:      'rgba(255,255,255,0.92)',
+              fontSize:   'clamp(2rem, 5vw, 3.75rem)',
+            }}
+          >
+            {mf.title}
+          </h2>
+          <p
+            className="text-sm sm:text-base font-light leading-relaxed max-w-sm"
+            style={{ color: 'rgba(255,255,255,0.56)' }}
+          >
+            {mf.body}
+          </p>
+        </div>
+      </motion.div>
 
       {/* ── Dot navigation ── */}
       <div
