@@ -1,15 +1,5 @@
-import Navbar                   from "@/components/landing/Navbar";
-import VideoScrollytellingClean from "@/components/VideoScrollytellingClean";
-import InvisibleMarket          from "@/components/landing/InvisibleMarket";
-import FinalCTA                 from "@/components/landing/FinalCTA";
+import HomelioScrollytellingStable from "@/components/HomelioScrollytellingStable";
 
 export default function Home() {
-  return (
-    <>
-      <Navbar />
-      <VideoScrollytellingClean />
-      <InvisibleMarket />
-      <FinalCTA />
-    </>
-  );
+  return <HomelioScrollytellingStable />;
 }
