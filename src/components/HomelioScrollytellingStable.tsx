@@ -191,7 +191,7 @@ function MF0Content() {
       {/* MF0-only left readability gradient */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
+        background: 'linear-gradient(to right, rgba(4,3,2,0.54) 0%, rgba(4,3,2,0.40) 22%, rgba(4,3,2,0.20) 46%, rgba(4,3,2,0.07) 62%, transparent 76%)',
       }} />
 
       {/* Left text block — vertically centered at 53% */}
