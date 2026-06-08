@@ -7,18 +7,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // ─────────────────────────────────────────────────────────────────────────────
 const END_OFFSET         = 0.05;
 const PLAYBACK_RATE      = 1.35;
-const SCROLL_COOLDOWN_MS = 700;
+const SCROLL_COOLDOWN_MS = 1000;
 const GOLD               = '#C9A84C';
+const SHOW_DEBUG         = false;
 
 // ── Overlay / animation constants (edit freely) ───────────────────────────────
 const HOLD_OVERLAY_OPACITY                  = 0.38;  // milky veil strength in hold mode
 const TRANSITION_OVERLAY_OPACITY            = 0.08;  // veil nearly gone while video plays
-const UI_FADE_OUT_MS                        = 900;   // UI fades out at transition start
-const UI_FADE_IN_MS                         = 1100;  // UI fades in for nav-jump arrivals
-const OVERLAY_FADE_MS                       = 1000;  // overlay crossfade duration
-const UI_FADE_IN_DELAY_MS                   = 250;   // extra pause before UI appears on arrival
+const UI_FADE_OUT_MS                        = 1200;  // UI fades out at transition start
+const UI_FADE_IN_MS                         = 1400;  // UI fades in for nav-jump arrivals
+const OVERLAY_FADE_MS                       = 1300;  // overlay crossfade duration
+const UI_FADE_IN_DELAY_MS                   = 300;   // extra pause before UI appears on arrival
 const DESTINATION_UI_FADE_START_PROGRESS    = 0.78;  // when destination UI starts fading in
-const DESTINATION_UI_FADE_IN_MS            = 1200;  // duration of destination UI fade-in
+const DESTINATION_UI_FADE_IN_MS            = 1500;  // duration of destination UI fade-in
 const DESTINATION_OVERLAY_FADE_START_PROGRESS = 0.70; // when overlay starts returning to hold
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,24 +108,24 @@ function TopNav({ onJump }: { onJump: (mf: MFIndex) => void }) {
       <nav style={{
         pointerEvents: 'auto',
         display: 'flex', alignItems: 'center', gap: 2,
-        padding: '6px 8px', borderRadius: 999,
-        background: 'rgba(16,13,9,0.82)',
-        backdropFilter: 'blur(22px) saturate(1.4)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        boxShadow: '0 4px 28px rgba(0,0,0,0.50)',
+        padding: '5px 6px', borderRadius: 999,
+        background: 'rgba(20,16,8,0.44)',
+        backdropFilter: 'blur(28px) saturate(1.8)',
+        border: '1px solid rgba(255,255,255,0.20)',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
       }}>
-        <button onClick={() => onJump(0)} style={navBtnStyle(600)}>Homelio</button>
+        <button onClick={() => onJump(0)} style={{ ...navBtnStyle(600), color: GOLD }}>Homelio</button>
         <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.13)', flexShrink: 0, margin: '0 2px' }} />
         <button onClick={() => onJump(1)} style={navBtnStyle()}>Konzept</button>
         <button onClick={() => onJump(2)} style={navBtnStyle()}>Wohnung finden</button>
+        <button onClick={() => onJump(3)} style={navBtnStyle()}>Angebote</button>
         <a href="/anmelden" style={{
           marginLeft: 6, padding: '7px 18px', borderRadius: 999,
           background: GOLD, color: '#0C0A06',
           fontSize: 13, fontWeight: 500, textDecoration: 'none',
           whiteSpace: 'nowrap', letterSpacing: '0.01em',
         }}>
-          <span className="hidden xl:inline">Jetzt unverbindlich Angebote erhalten</span>
-          <span className="xl:hidden">Anmelden</span>
+          Anmelden
         </a>
       </nav>
     </div>
@@ -135,7 +136,7 @@ function navBtnStyle(weight = 400) {
   return {
     padding: '7px 14px', background: 'none', border: 'none', cursor: 'pointer',
     fontSize: 13, fontWeight: weight, borderRadius: 999, color: weight === 600
-      ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.72)',
+      ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
     letterSpacing: weight === 600 ? '0.04em' : undefined,
   };
 }
@@ -161,86 +162,123 @@ const TRUST_POINTS = [
   'Keine Weitergabe. Keine Werbung. Kein Spam.',
 ] as const;
 
+// Distinct icon per trust point — padlock / shield+check / blocked circle
+const TRUST_ICONS = [
+  /* 0 — privacy / lock */
+  <svg key="lock" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <rect x="2.5" y="7" width="11" height="8" rx="1.5" stroke={GOLD} strokeWidth="1.1" />
+    <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" />
+    <circle cx="8" cy="11" r="1" fill={GOLD} />
+  </svg>,
+  /* 1 — Swiss compliance / shield + checkmark */
+  <svg key="shield" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M8 1.5L14 4.2v4c0 3.2-2.5 5.5-6 6.3C4.5 13.7 2 11.4 2 8.2v-4L8 1.5z"
+      stroke={GOLD} strokeWidth="1.1" strokeLinejoin="round" />
+    <path d="M5.5 8l2 2 3-3.5" stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>,
+  /* 2 — no sharing / no spam / blocked */
+  <svg key="blocked" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <circle cx="8" cy="8" r="6" stroke={GOLD} strokeWidth="1.1" />
+    <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" />
+  </svg>,
+];
+
 function MF0Content() {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Vignette />
+      <Vignette stops="rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.38) 26%, rgba(4,3,2,0.08) 55%, transparent 76%" />
 
-      {/* Left text block */}
+      {/* MF0-only left readability gradient */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
+      }} />
+
+      {/* Left text block — vertically centered at 53% */}
       <div style={{
         position: 'absolute',
-        bottom: 'clamp(54px, 7vh, 82px)',
-        left: 'clamp(40px, 6vw, 96px)',
-        maxWidth: 'min(490px, 46vw)',
+        top: '53%',
+        transform: 'translateY(-50%)',
+        left: 'clamp(20px, 9vw, 148px)',
+        maxWidth: 'min(540px, calc(100vw - 40px))',
       }}>
-        <p style={{
-          fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
-          color: GOLD, opacity: 0.85, marginBottom: 16, margin: '0 0 16px',
-        }}>HOMELIO</p>
-
         <h1 style={{
-          fontSize: 'clamp(36px, 4.8vw, 64px)', fontWeight: 300, lineHeight: 1.06,
-          color: 'rgba(255,255,255,0.97)', margin: '0 0 20px',
+          fontSize: 'clamp(44px, 5.5vw, 78px)', fontWeight: 300, lineHeight: 1.12,
+          color: 'rgba(255,252,244,0.95)', margin: '0 0 24px',
           fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
         }}>
           Sie überlegen umzuziehen?
         </h1>
 
         <p style={{
-          fontSize: 14, fontWeight: 300, lineHeight: 1.72,
-          color: 'rgba(255,255,255,0.60)', margin: '0 0 28px', maxWidth: 410,
+          fontSize: 17, fontWeight: 300, lineHeight: 1.76,
+          color: 'rgba(255,252,244,0.94)', margin: '0 0 32px', maxWidth: 430,
         }}>
-          Registrieren Sie sich einmal und erhalten Sie persönliche Wohnangebote,
-          oft bevor sie öffentlich ausgeschrieben sind – ohne direkten Konkurrenzdruck.
+          Registrieren Sie sich kostenlos und erhalten Sie persönliche Wohnungsangebote,
+          bevor sie öffentlich ausgeschrieben sind – ohne direkten Konkurrenzdruck.
           Ihre Daten bleiben vertraulich und datenschutzkonform geschützt.
         </p>
 
         {/* CTA */}
         <a href="/anmelden" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '13px 28px', borderRadius: 999,
+          padding: '14px 30px', borderRadius: 999,
           background: GOLD, color: '#0C0A06',
-          fontSize: 14, fontWeight: 500, textDecoration: 'none',
+          fontSize: 15, fontWeight: 500, textDecoration: 'none',
           letterSpacing: '0.01em', whiteSpace: 'nowrap',
         }}>
           Jetzt unverbindlich Angebote erhalten <span aria-hidden>→</span>
         </a>
 
         {/* Trust points */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 22 }}>
-          {TRUST_POINTS.map(t => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, opacity: 0.65 }}>
-                <path d="M6.5 1.2L11 3.3V6.8c0 2.4-1.8 4.2-4.5 4.9C3.8 11 2 9.2 2 6.8V3.3L6.5 1.2z"
-                  stroke={GOLD} strokeWidth="1" fill="none" />
-              </svg>
-              <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.42)', lineHeight: 1.4 }}>{t}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 30 }}>
+          {TRUST_POINTS.map((t, i) => (
+            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              {TRUST_ICONS[i]}
+              <span style={{ fontSize: 14, color: 'rgba(255,252,244,0.92)', lineHeight: 1.4 }}>{t}</span>
             </div>
           ))}
         </div>
+
+        {/* Mobile-only stat card — below trust bullets */}
+        <div className="inline-flex md:hidden" style={{
+          marginTop: 20,
+          flexDirection: 'column', alignItems: 'center', gap: 6,
+          padding: '14px 24px', borderRadius: 18,
+          background: 'rgba(18,14,7,0.52)',
+          border: '1px solid rgba(255,255,255,0.16)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <path d="M2 9.5L10 3l8 6.5V19H13v-5.5H7V19H2V9.5z"
+              stroke={GOLD} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+          </svg>
+          <span style={{ fontSize: 30, fontWeight: 300, color: 'rgba(255,252,244,0.95)', lineHeight: 1.05, marginTop: 6 }}>450</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,252,244,0.88)', textAlign: 'center', lineHeight: 1.55, marginTop: 2 }}>aktuelle<br />Wohnchancen</span>
+        </div>
       </div>
 
-      {/* Stat card — bottom right */}
-      <div style={{
+      {/* Stat card — bottom-aligned with trust points (desktop only) */}
+      <div className="hidden md:flex" style={{
         position: 'absolute',
-        bottom: 'clamp(54px, 7vh, 82px)',
-        right: 'clamp(40px, 6vw, 96px)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-        padding: '22px 30px', borderRadius: 18,
-        background: 'rgba(255,255,255,0.055)',
-        backdropFilter: 'blur(20px) saturate(1.3)',
-        border: '1px solid rgba(255,255,255,0.10)',
+        bottom: 'clamp(100px, 26vh, 310px)',
+        right: 'clamp(88px, 12vw, 172px)',
+        flexDirection: 'column', alignItems: 'center', gap: 8,
+        padding: '30px 42px', borderRadius: 24,
+        background: 'rgba(18,14,7,0.52)',
+        border: '1px solid rgba(255,255,255,0.16)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
       }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M2 9.5L10 3l8 6.5V19H13v-5.5H7V19H2V9.5z"
             stroke={GOLD} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
         </svg>
         <span style={{
-          fontSize: 36, fontWeight: 300, color: 'rgba(255,255,255,0.95)',
-          lineHeight: 1.05, marginTop: 8,
+          fontSize: 42, fontWeight: 300, color: 'rgba(255,252,244,0.95)',
+          lineHeight: 1.05, marginTop: 10,
         }}>450</span>
         <span style={{
-          fontSize: 11.5, color: 'rgba(255,255,255,0.42)',
+          fontSize: 14, color: 'rgba(255,252,244,0.88)',
           textAlign: 'center', lineHeight: 1.55, marginTop: 2,
         }}>aktuelle<br />Wohnchancen</span>
       </div>
@@ -330,7 +368,13 @@ const MF1_BODY = [
 function MF1Content() {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Vignette stops="rgba(4,3,2,0.88) 0%, rgba(4,3,2,0.52) 32%, rgba(4,3,2,0.10) 62%, transparent 82%" />
+      <Vignette stops="rgba(4,3,2,0.90) 0%, rgba(4,3,2,0.60) 32%, rgba(4,3,2,0.18) 62%, transparent 82%" />
+
+      {/* Left readability gradient */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
+      }} />
 
       <div style={{
         position: 'absolute', inset: 0,
@@ -347,7 +391,7 @@ function MF1Content() {
 
           <h2 style={{
             fontSize: 'clamp(26px, 3.2vw, 44px)', fontWeight: 300, lineHeight: 1.09,
-            color: 'rgba(255,255,255,0.96)', margin: '0 0 24px',
+            color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
             fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
           }}>
             Wenn sich das Leben verändert, verändert sich auch die Wohnung.
@@ -356,7 +400,7 @@ function MF1Content() {
           {MF1_BODY.map((p, i) => (
             <p key={i} style={{
               fontSize: 13.5, fontWeight: 300, lineHeight: 1.70,
-              color: 'rgba(255,255,255,0.54)', margin: '0 0 11px', maxWidth: 400,
+              color: 'rgba(255,252,244,0.80)', margin: '0 0 11px', maxWidth: 400,
             }}>{p}</p>
           ))}
         </div>
@@ -402,7 +446,13 @@ const STEPS = [
 function MF2Content() {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Vignette stops="rgba(4,3,2,0.88) 0%, rgba(4,3,2,0.52) 32%, rgba(4,3,2,0.10) 62%, transparent 82%" />
+      <Vignette stops="rgba(4,3,2,0.90) 0%, rgba(4,3,2,0.60) 32%, rgba(4,3,2,0.18) 62%, transparent 82%" />
+
+      {/* Left readability gradient */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
+      }} />
 
       <div style={{
         position: 'absolute', inset: 0,
@@ -418,19 +468,19 @@ function MF2Content() {
           }}>MATCHING</p>
           <h2 style={{
             fontSize: 'clamp(30px, 3.8vw, 52px)', fontWeight: 300, lineHeight: 1.08,
-            color: 'rgba(255,255,255,0.96)', margin: '0 0 18px',
+            color: 'rgba(255,252,244,0.96)', margin: '0 0 18px',
             fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
           }}>Intelligent verbunden.</h2>
           <p style={{
             fontSize: 14, fontWeight: 300, lineHeight: 1.70,
-            color: 'rgba(255,255,255,0.58)', margin: '0 0 20px', maxWidth: 340,
+            color: 'rgba(255,252,244,0.82)', margin: '0 0 20px', maxWidth: 340,
           }}>
             Registrieren Sie sich und erhalten Sie persönliche Wohnangebote –
             diskret, passend und ohne Konkurrenzdruck.
           </p>
           <p style={{
             fontSize: 12.5, fontWeight: 300, lineHeight: 1.60,
-            color: 'rgba(255,255,255,0.36)', margin: 0, maxWidth: 320,
+            color: 'rgba(255,252,244,0.60)', margin: 0, maxWidth: 320,
           }}>
             So entsteht ein diskreter, effizienter und reibungsloser Ablauf –
             für Suchende und Verwaltungen.
@@ -487,20 +537,23 @@ function MF2Content() {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Mainframe 4 — MF3  (Video_3 paused at its endpoint)
 // ─────────────────────────────────────────────────────────────────────────────
-const LISTING_CARDS = [
-  { size: '3.5 Zi. · 89 m²',  location: 'Zürich', tag: 'Frühangebot · Diskret' },
-  { size: '4.5 Zi. · 108 m²', location: 'Zürich', tag: 'Vorab geprüft' },
-] as const;
 
 function MF3Content() {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Vignette stops="rgba(4,3,2,0.90) 0%, rgba(4,3,2,0.56) 30%, rgba(4,3,2,0.12) 60%, transparent 80%" />
+      <Vignette stops="rgba(4,3,2,0.92) 0%, rgba(4,3,2,0.64) 30%, rgba(4,3,2,0.18) 60%, transparent 80%" />
+
+      {/* Left readability gradient */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
+      }} />
 
       {/* Left text + CTA */}
       <div style={{
         position: 'absolute',
-        bottom: 'clamp(54px, 7vh, 82px)',
+        top: '53%',
+        transform: 'translateY(-50%)',
         left: 'clamp(40px, 6vw, 96px)',
         maxWidth: 'min(460px, 44vw)',
       }}>
@@ -510,21 +563,21 @@ function MF3Content() {
         }}>ANGEBOTE</p>
         <h2 style={{
           fontSize: 'clamp(34px, 4.5vw, 58px)', fontWeight: 300, lineHeight: 1.07,
-          color: 'rgba(255,255,255,0.96)', margin: '0 0 18px',
+          color: 'rgba(255,252,244,0.96)', margin: '0 0 18px',
           fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
         }}>
           Persönliche Angebote.<br />Früh und passend.
         </h2>
         <p style={{
           fontSize: 14.5, fontWeight: 300, lineHeight: 1.72,
-          color: 'rgba(255,255,255,0.62)', margin: '0 0 12px', maxWidth: 410,
+          color: 'rgba(255,252,244,0.84)', margin: '0 0 12px', maxWidth: 410,
         }}>
           Erhalten Sie persönliche Angebote, bevor Wohnungen öffentlich ausgeschrieben
           werden – diskret, passend und ohne den üblichen Konkurrenzdruck.
         </p>
         <p style={{
           fontSize: 13, fontWeight: 300, lineHeight: 1.60,
-          color: 'rgba(255,255,255,0.40)', margin: '0 0 28px', maxWidth: 380,
+          color: 'rgba(255,252,244,0.62)', margin: '0 0 28px', maxWidth: 380,
         }}>
           Einmal registrieren genügt. Homelio informiert Sie, sobald eine passende
           Wohnchance entsteht.
@@ -540,37 +593,6 @@ function MF3Content() {
         </a>
       </div>
 
-      {/* Floating listing cards — bottom right */}
-      <div style={{
-        position: 'absolute',
-        right: 'clamp(40px, 6vw, 96px)',
-        bottom: 'clamp(54px, 7vh, 82px)',
-        display: 'flex', flexDirection: 'column', gap: 10,
-      }}>
-        {LISTING_CARDS.map((card, i) => (
-          <div key={i} style={{
-            padding: '14px 20px', borderRadius: 14,
-            background: 'rgba(255,255,255,0.055)',
-            backdropFilter: 'blur(20px) saturate(1.3)',
-            border: '1px solid rgba(255,255,255,0.11)',
-            minWidth: 210,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, flexShrink: 0 }} />
-              <span style={{
-                fontSize: 10.5, color: 'rgba(255,255,255,0.42)',
-                letterSpacing: '0.05em', textTransform: 'uppercase',
-              }}>{card.tag}</span>
-            </div>
-            <div style={{
-              fontSize: 15, fontWeight: 400, color: 'rgba(255,255,255,0.92)', marginBottom: 2,
-            }}>{card.size}</div>
-            <div style={{
-              fontSize: 12.5, fontWeight: 300, color: 'rgba(255,255,255,0.50)',
-            }}>{card.location}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -876,6 +898,18 @@ export default function HomelioScrollytellingStable() {
         transition: `opacity ${OVERLAY_FADE_MS}ms ease`,
       }} />
 
+      {/* ── Layer 2.5: cinematic blur — Frames 2/3/4 only, fades with UI ── */}
+      {mainframeIndex !== 0 && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+          backdropFilter: 'blur(4px) saturate(1.1)',
+          opacity: uiVisible ? 1 : 0,
+          transition: uiVisible
+            ? `opacity ${destinationFadeRef.current ? DESTINATION_UI_FADE_IN_MS : UI_FADE_IN_MS}ms ease ${destinationFadeRef.current ? 0 : UI_FADE_IN_DELAY_MS}ms`
+            : `opacity ${UI_FADE_OUT_MS}ms ease`,
+        }} />
+      )}
+
       {/* ── Layer 3: programmed mainframe UI — fades in on the paused video frame ── */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 5,
@@ -892,7 +926,7 @@ export default function HomelioScrollytellingStable() {
       <TopNav onJump={jumpTo} />
 
       {/* ── Dev debug panel ── */}
-      {process.env.NODE_ENV === 'development' && (
+      {SHOW_DEBUG && process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'absolute', bottom: 10, left: 10, zIndex: 9999,
           background: 'rgba(0,0,0,0.84)', color: '#00ff88',
