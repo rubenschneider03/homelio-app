@@ -310,12 +310,19 @@ function ConceptDiagram() {
   const curveD = `M ${s1x},${s1y + sr} Q 8,${lcy} ${s2x},${s2y - sr}`;
 
   return (
-    <svg width="326" height="300" viewBox="0 0 326 300" style={{ overflow: 'visible', flexShrink: 0 }}>
+    <svg
+      width="490" height="450" viewBox="0 0 326 300"
+      className="max-w-[270px] md:max-w-none"
+      style={{ overflow: 'visible', display: 'block', width: 'min(490px, 100%)', height: 'auto' }}
+    >
       <defs>
         <marker id="mw" markerWidth="8" markerHeight="8" refX="6" refY="3.5" orient="auto">
           <path d="M0 1.2 L6 3.5 L0 5.8" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.2" />
         </marker>
         <marker id="mg" markerWidth="8" markerHeight="8" refX="6" refY="3.5" orient="auto">
+          <path d="M0 1.2 L6 3.5 L0 5.8" fill="none" stroke={GOLD} strokeWidth="1.2" />
+        </marker>
+        <marker id="mg-rev" markerWidth="8" markerHeight="8" refX="6" refY="3.5" orient="auto-start-reverse">
           <path d="M0 1.2 L6 3.5 L0 5.8" fill="none" stroke={GOLD} strokeWidth="1.2" />
         </marker>
       </defs>
@@ -326,11 +333,12 @@ function ConceptDiagram() {
       <line x1={a2.x1} y1={a2.y1} x2={a2.x2} y2={a2.y2}
         stroke="rgba(255,255,255,0.58)" strokeWidth="1.5" markerEnd="url(#mw)" />
 
-      {/* Gold Homelio curve connecting the two small circles */}
-      <path d={curveD} fill="none" stroke={GOLD} strokeWidth="1.8" markerEnd="url(#mg)" />
+      {/* Gold Homelio curve connecting the two small circles — bidirectional */}
+      <path d={curveD} fill="none" stroke={GOLD} strokeWidth="1.8"
+        markerStart="url(#mg-rev)" markerEnd="url(#mg)" />
 
-      {/* "Homelio" label along the gold curve */}
-      <text x="1" y={lcy + 4} fill={GOLD} fontSize="10" fontWeight="500" opacity="0.88"
+      {/* "Homelio" label — beside the gold curve, clear of the path */}
+      <text x="44" y="145" textAnchor="start" fill={GOLD} fontSize="10" fontWeight="500" opacity="0.88"
         style={{ letterSpacing: '0.06em' }}>
         Homelio
       </text>
@@ -338,22 +346,22 @@ function ConceptDiagram() {
       {/* Large circle — Wohnungsmarkt */}
       <circle cx={lcx} cy={lcy} r={lr}
         fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.36)" strokeWidth="1.8" />
-      <text x={lcx} y={lcy - 6} fill="rgba(255,255,255,0.90)" fontSize="12.5"
+      <text x={lcx} y={lcy - 6} fill="rgba(255,255,255,0.90)" fontSize="14"
         textAnchor="middle" fontWeight="400">Wohnungs-</text>
-      <text x={lcx} y={lcy + 11} fill="rgba(255,255,255,0.90)" fontSize="12.5"
+      <text x={lcx} y={lcy + 11} fill="rgba(255,255,255,0.90)" fontSize="14"
         textAnchor="middle" fontWeight="400">markt</text>
 
       {/* Small circle upper */}
       <circle cx={s1x} cy={s1y} r={sr}
         fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.30)" strokeWidth="1.6" />
-      <text x={s1x} y={s1y - 4} fill="rgba(255,255,255,0.78)" fontSize="9.5" textAnchor="middle">Wohnungs-</text>
-      <text x={s1x} y={s1y + 10} fill="rgba(255,255,255,0.78)" fontSize="9.5" textAnchor="middle">suchende</text>
+      <text x={s1x} y={s1y - 4} fill="rgba(255,255,255,0.78)" fontSize="11" textAnchor="middle">Wohnungs-</text>
+      <text x={s1x} y={s1y + 10} fill="rgba(255,255,255,0.78)" fontSize="11" textAnchor="middle">suchende</text>
 
       {/* Small circle lower */}
       <circle cx={s2x} cy={s2y} r={sr}
         fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.30)" strokeWidth="1.6" />
-      <text x={s2x} y={s2y - 4} fill="rgba(255,255,255,0.78)" fontSize="9.5" textAnchor="middle">Wohnungs-</text>
-      <text x={s2x} y={s2y + 10} fill="rgba(255,255,255,0.78)" fontSize="9.5" textAnchor="middle">suchende</text>
+      <text x={s2x} y={s2y - 4} fill="rgba(255,255,255,0.78)" fontSize="11" textAnchor="middle">Wohnungs-</text>
+      <text x={s2x} y={s2y + 10} fill="rgba(255,255,255,0.78)" fontSize="11" textAnchor="middle">suchende</text>
     </svg>
   );
 }
@@ -376,21 +384,26 @@ function MF1Content() {
         background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
       }} />
 
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '82px clamp(40px,6vw,96px) clamp(54px,7vh,82px)',
-        gap: 'clamp(28px, 4vw, 60px)',
-      }}>
+      <div
+        className="flex-col items-center md:flex-row md:items-center md:justify-between pt-[80px] md:pt-[120px]"
+        style={{
+          position: 'absolute', inset: 0,
+          display: 'flex',
+          paddingLeft: 'clamp(20px,9vw,148px)',
+          paddingRight: 'clamp(20px,6vw,96px)',
+          paddingBottom: 'clamp(54px,7vh,82px)',
+          gap: 'clamp(14px, 3vw, 60px)',
+        }}
+      >
         {/* Left: text */}
-        <div style={{ flex: '1 1 320px', maxWidth: 440 }}>
+        <div className="w-full md:w-auto" style={{ flex: '1 1 380px', maxWidth: 500 }}>
           <p style={{
             fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
             color: GOLD, opacity: 0.85, margin: '0 0 16px',
           }}>KONZEPT</p>
 
           <h2 style={{
-            fontSize: 'clamp(26px, 3.2vw, 44px)', fontWeight: 300, lineHeight: 1.09,
+            fontSize: 'clamp(30px, 4.0vw, 54px)', fontWeight: 300, lineHeight: 1.10,
             color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
             fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
           }}>
@@ -398,22 +411,26 @@ function MF1Content() {
           </h2>
 
           {MF1_BODY.map((p, i) => (
-            <p key={i} style={{
-              fontSize: 13.5, fontWeight: 300, lineHeight: 1.70,
-              color: 'rgba(255,252,244,0.80)', margin: '0 0 11px', maxWidth: 400,
+            <p key={i} className="mb-[10px] md:mb-[14px]" style={{
+              fontSize: 16, fontWeight: 300, lineHeight: 1.75,
+              color: 'rgba(255,252,244,0.86)', marginTop: 0, marginLeft: 0, marginRight: 0, maxWidth: 450,
             }}>{p}</p>
           ))}
         </div>
 
         {/* Right: glass card with SVG diagram */}
-        <div style={{
-          flex: '0 0 auto',
-          padding: '26px 20px', borderRadius: 20,
-          background: 'rgba(255,255,255,0.045)',
-          backdropFilter: 'blur(16px) saturate(1.2)',
-          border: '1px solid rgba(255,255,255,0.09)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div
+          className="md:w-auto"
+          style={{
+            flex: '0 0 auto',
+            padding: 'clamp(10px,2.5vw,36px) clamp(12px,2vw,32px)',
+            borderRadius: 'clamp(14px,2vw,24px)',
+            background: 'rgba(18,14,7,0.52)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
           <ConceptDiagram />
         </div>
       </div>
@@ -438,8 +455,12 @@ const STEPS = [
     body: 'Wenn ein Vorschlag für Sie passt, akzeptieren Sie ihn verbindlich mit einem Klick.',
   },
   {
-    n: '4', title: 'Verwaltung & Wechsel',
-    body: 'Wir schlagen Ihr Interesse der Verwaltung vor. Wenn diese zustimmt, kommt es zum Wohnungswechsel.',
+    n: '4', title: 'Verwaltung prüft',
+    body: 'Wir schlagen Ihr Interesse der Verwaltung vor. Wenn diese zustimmt, wird der nächste Schritt vorbereitet.',
+  },
+  {
+    n: '5', title: 'Besichtigung & Vertragsabschluss',
+    body: 'Sie besichtigen die Wohnung und schliessen den Vertrag direkt mit der Verwaltung ab.',
   },
 ] as const;
 
@@ -457,45 +478,47 @@ function MF2Content() {
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '82px clamp(40px,6vw,96px) clamp(54px,7vh,82px)',
+        paddingTop: 'clamp(82px, 13vh, 136px)',
+        paddingLeft: 'clamp(20px,9vw,148px)',
+        paddingRight: 'clamp(40px,6vw,96px)',
+        paddingBottom: 'clamp(54px,7vh,82px)',
         gap: 'clamp(28px, 4vw, 60px)',
       }}>
         {/* Left: label + headline + intro */}
-        <div style={{ flex: '1 1 260px', maxWidth: 380, minWidth: 0 }}>
+        <div style={{ flex: '1 1 300px', maxWidth: 420, minWidth: 0 }}>
           <p style={{
             fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
             color: GOLD, opacity: 0.85, margin: '0 0 16px',
           }}>MATCHING</p>
           <h2 style={{
-            fontSize: 'clamp(30px, 3.8vw, 52px)', fontWeight: 300, lineHeight: 1.08,
-            color: 'rgba(255,252,244,0.96)', margin: '0 0 18px',
+            fontSize: 'clamp(32px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.09,
+            color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
             fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
           }}>Intelligent verbunden.</h2>
           <p style={{
-            fontSize: 14, fontWeight: 300, lineHeight: 1.70,
-            color: 'rgba(255,252,244,0.82)', margin: '0 0 20px', maxWidth: 340,
+            fontSize: 16, fontWeight: 300, lineHeight: 1.75,
+            color: 'rgba(255,252,244,0.82)', margin: '0 0 24px', maxWidth: 360,
           }}>
-            Registrieren Sie sich und erhalten Sie persönliche Wohnangebote –
-            diskret, passend und ohne Konkurrenzdruck.
+            In wenigen Schritten vom Wohnprofil zur passenden Wohnung.
           </p>
           <p style={{
-            fontSize: 12.5, fontWeight: 300, lineHeight: 1.60,
-            color: 'rgba(255,252,244,0.60)', margin: 0, maxWidth: 320,
+            fontSize: 13, fontWeight: 300, lineHeight: 1.60,
+            color: 'rgba(255,252,244,0.60)', margin: 0, maxWidth: 340,
           }}>
-            So entsteht ein diskreter, effizienter und reibungsloser Ablauf –
-            für Suchende und Verwaltungen.
+            Homelio begleitet den Ablauf strukturiert: vom Erfassen Ihres Wohnprofils
+            über das intelligente Matching bis zur Besichtigung und zum Vertragsabschluss.
           </p>
         </div>
 
-        {/* Right: vertical 4-step cards */}
-        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', maxWidth: 340, minWidth: 0 }}>
+        {/* Right: vertical 5-step cards */}
+        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', maxWidth: 380, minWidth: 0 }}>
           {STEPS.map((step, i) => (
             <div key={step.n}>
               <div style={{
                 padding: '11px 14px', borderRadius: 12,
-                background: i === 0 ? 'rgba(201,168,76,0.09)' : 'rgba(255,255,255,0.05)',
-                border: i === 0 ? `1px solid rgba(201,168,76,0.28)` : '1px solid rgba(255,255,255,0.09)',
-                backdropFilter: 'blur(14px)',
+                background: i === 0 ? 'rgba(18,14,7,0.64)' : 'rgba(18,14,7,0.44)',
+                border: i === 0 ? '1px solid rgba(201,168,76,0.32)' : '1px solid rgba(255,255,255,0.12)',
+                boxShadow: i === 0 ? '0 4px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(201,168,76,0.10)' : '0 2px 12px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.05)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{
@@ -554,39 +577,39 @@ function MF3Content() {
         position: 'absolute',
         top: '53%',
         transform: 'translateY(-50%)',
-        left: 'clamp(40px, 6vw, 96px)',
-        maxWidth: 'min(460px, 44vw)',
+        left: 'clamp(20px, 9vw, 148px)',
+        maxWidth: 'min(520px, calc(100vw - 40px))',
       }}>
         <p style={{
           fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
           color: GOLD, opacity: 0.85, margin: '0 0 16px',
         }}>ANGEBOTE</p>
         <h2 style={{
-          fontSize: 'clamp(34px, 4.5vw, 58px)', fontWeight: 300, lineHeight: 1.07,
-          color: 'rgba(255,252,244,0.96)', margin: '0 0 18px',
+          fontSize: 'clamp(32px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.10,
+          color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
           fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
         }}>
           Persönliche Angebote.<br />Früh und passend.
         </h2>
         <p style={{
-          fontSize: 14.5, fontWeight: 300, lineHeight: 1.72,
-          color: 'rgba(255,252,244,0.84)', margin: '0 0 12px', maxWidth: 410,
+          fontSize: 16, fontWeight: 300, lineHeight: 1.75,
+          color: 'rgba(255,252,244,0.86)', margin: '0 0 24px', maxWidth: 460,
         }}>
           Erhalten Sie persönliche Angebote, bevor Wohnungen öffentlich ausgeschrieben
           werden – diskret, passend und ohne den üblichen Konkurrenzdruck.
         </p>
         <p style={{
-          fontSize: 13, fontWeight: 300, lineHeight: 1.60,
-          color: 'rgba(255,252,244,0.62)', margin: '0 0 28px', maxWidth: 380,
+          fontSize: 14, fontWeight: 300, lineHeight: 1.65,
+          color: 'rgba(255,252,244,0.62)', margin: '0 0 32px', maxWidth: 420,
         }}>
           Einmal registrieren genügt. Homelio informiert Sie, sobald eine passende
           Wohnchance entsteht.
         </p>
         <a href="/anmelden" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '13px 28px', borderRadius: 999,
+          padding: '14px 30px', borderRadius: 999,
           background: GOLD, color: '#0C0A06',
-          fontSize: 14, fontWeight: 500, textDecoration: 'none',
+          fontSize: 15, fontWeight: 500, textDecoration: 'none',
           letterSpacing: '0.01em', whiteSpace: 'nowrap',
         }}>
           Jetzt unverbindlich Angebote erhalten <span aria-hidden>→</span>
