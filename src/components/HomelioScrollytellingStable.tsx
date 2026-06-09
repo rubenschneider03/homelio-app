@@ -100,34 +100,80 @@ function getBackwardTransition(index: MFIndex): { src: string; target: MFIndex }
 //  Navigation
 // ─────────────────────────────────────────────────────────────────────────────
 function TopNav({ onJump }: { onJump: (mf: MFIndex) => void }) {
+  const glassPill = {
+    pointerEvents: 'auto' as const,
+    alignItems: 'center' as const,
+    gap: 2,
+    borderRadius: 999,
+    background: 'rgba(20,16,8,0.44)',
+    backdropFilter: 'blur(28px) saturate(1.8)',
+    border: '1px solid rgba(255,255,255,0.20)',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
+  };
   return (
-    <div style={{
-      position: 'absolute', top: 20, left: 0, right: 0, zIndex: 100,
-      display: 'flex', justifyContent: 'center', pointerEvents: 'none',
-    }}>
-      <nav style={{
-        pointerEvents: 'auto',
-        display: 'flex', alignItems: 'center', gap: 2,
-        padding: '5px 6px', borderRadius: 999,
-        background: 'rgba(20,16,8,0.44)',
-        backdropFilter: 'blur(28px) saturate(1.8)',
-        border: '1px solid rgba(255,255,255,0.20)',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
-      }}>
-        <button onClick={() => onJump(0)} style={{ ...navBtnStyle(600), color: GOLD }}>Homelio</button>
-        <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.13)', flexShrink: 0, margin: '0 2px' }} />
-        <button onClick={() => onJump(1)} style={navBtnStyle()}>Konzept</button>
-        <button onClick={() => onJump(2)} style={navBtnStyle()}>Wohnung finden</button>
-        <button onClick={() => onJump(3)} style={navBtnStyle()}>Angebote</button>
-        <a href="/anmelden" style={{
-          marginLeft: 6, padding: '7px 18px', borderRadius: 999,
-          background: GOLD, color: '#0C0A06',
-          fontSize: 13, fontWeight: 500, textDecoration: 'none',
-          whiteSpace: 'nowrap', letterSpacing: '0.01em',
-        }}>
-          Anmelden
-        </a>
-      </nav>
+    <div
+      className="top-[0px] md:top-[20px]"
+      style={{
+        position: 'absolute', left: 0, right: 0, zIndex: 100,
+        display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+      }}
+    >
+      {/* Mobile: gold wordmark above compact pill — hidden on desktop */}
+      <div className="flex flex-col md:hidden" style={{ width: '100%', gap: 0, alignItems: 'center' }}>
+        <button
+          onClick={() => onJump(0)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            pointerEvents: 'auto',
+          }}
+        >
+          <img src="/logo/homelio-logo-name.png" alt="Homelio" style={{ height: 56, maxWidth: 450, objectFit: 'contain', display: 'block' }} />
+        </button>
+        <nav style={{ display: 'flex', ...glassPill, padding: '4px 5px', alignSelf: 'center' }}>
+          <button onClick={() => onJump(1)} style={{
+            padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 400, borderRadius: 999, color: 'rgba(255,255,255,0.82)',
+          }}>Konzept</button>
+          <button onClick={() => onJump(2)} style={{
+            padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 400, borderRadius: 999, color: 'rgba(255,255,255,0.82)',
+          }}>Finden</button>
+          <button onClick={() => onJump(3)} style={{
+            padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 400, borderRadius: 999, color: 'rgba(255,255,255,0.82)',
+          }}>Angebote</button>
+          <a href="/anmelden" style={{
+            marginLeft: 4, padding: '6px 14px', borderRadius: 999,
+            background: GOLD, color: '#0C0A06',
+            fontSize: 12, fontWeight: 500, textDecoration: 'none',
+            whiteSpace: 'nowrap', letterSpacing: '0.01em',
+          }}>Anmelden</a>
+        </nav>
+      </div>
+
+      {/* Desktop: wordmark above pill — hidden on mobile */}
+      <div className="hidden md:flex flex-col items-center" style={{ gap: 4 }}>
+        <button
+          onClick={() => onJump(0)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            pointerEvents: 'auto',
+          }}
+        >
+          <img src="/logo/homelio-logo-name.png" alt="Homelio" style={{ height: 95, maxWidth: 700, objectFit: 'contain', display: 'block' }} />
+        </button>
+        <nav style={{ display: 'flex', ...glassPill, padding: '5px 6px' }}>
+          <button onClick={() => onJump(1)} style={navBtnStyle()}>Konzept</button>
+          <button onClick={() => onJump(2)} style={navBtnStyle()}>Wohnung finden</button>
+          <button onClick={() => onJump(3)} style={navBtnStyle()}>Angebote</button>
+          <a href="/anmelden" style={{
+            marginLeft: 6, padding: '7px 18px', borderRadius: 999,
+            background: GOLD, color: '#0C0A06',
+            fontSize: 13, fontWeight: 500, textDecoration: 'none',
+            whiteSpace: 'nowrap', letterSpacing: '0.01em',
+          }}>Anmelden</a>
+        </nav>
+      </div>
     </div>
   );
 }
@@ -194,67 +240,84 @@ function MF0Content() {
         background: 'linear-gradient(to right, rgba(4,3,2,0.54) 0%, rgba(4,3,2,0.40) 22%, rgba(4,3,2,0.20) 46%, rgba(4,3,2,0.07) 62%, transparent 76%)',
       }} />
 
-      {/* Left text block — vertically centered at 53% */}
-      <div style={{
-        position: 'absolute',
-        top: '53%',
-        transform: 'translateY(-50%)',
-        left: 'clamp(20px, 9vw, 148px)',
-        maxWidth: 'min(540px, calc(100vw - 40px))',
-      }}>
-        <h1 style={{
-          fontSize: 'clamp(44px, 5.5vw, 78px)', fontWeight: 300, lineHeight: 1.12,
-          color: 'rgba(255,252,244,0.95)', margin: '0 0 24px',
-          fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
-        }}>
+      {/* Mobile-only contrast overlay */}
+      <div className="block md:hidden" style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'rgba(4,3,2,0.22)',
+      }} />
+
+      {/* Left text block — mobile: fixed top; desktop: vertically centered at 53% */}
+      <div
+        className="flex flex-col justify-center bottom-0 top-[90px] md:top-[53%] md:bottom-auto md:block md:-translate-y-1/2"
+        style={{
+          position: 'absolute',
+          left: 'clamp(20px, 9vw, 148px)',
+          maxWidth: 'min(540px, calc(100vw - 40px))',
+        }}
+      >
+        <h1
+          className="mb-[12px] md:mb-[24px]"
+          style={{
+            fontSize: 'clamp(28px, 5.5vw, 78px)', fontWeight: 300, lineHeight: 1.12,
+            color: 'rgba(255,252,244,0.95)', marginTop: 0,
+            fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+          }}
+        >
           Sie überlegen umzuziehen?
         </h1>
 
-        <p style={{
-          fontSize: 17, fontWeight: 300, lineHeight: 1.76,
-          color: 'rgba(255,252,244,0.94)', margin: '0 0 32px', maxWidth: 430,
-        }}>
+        <p
+          className="mb-[16px] md:mb-[32px]"
+          style={{
+            fontSize: 'clamp(13px, 1.4vw, 17px)', fontWeight: 300, lineHeight: 1.76,
+            color: 'rgba(255,252,244,0.94)', marginTop: 0, maxWidth: 430,
+          }}
+        >
           Registrieren Sie sich kostenlos und erhalten Sie persönliche Wohnungsangebote,
           bevor sie öffentlich ausgeschrieben sind – ohne direkten Konkurrenzdruck.
           Ihre Daten bleiben vertraulich und datenschutzkonform geschützt.
         </p>
 
         {/* CTA */}
-        <a href="/anmelden" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '14px 30px', borderRadius: 999,
-          background: GOLD, color: '#0C0A06',
-          fontSize: 15, fontWeight: 500, textDecoration: 'none',
-          letterSpacing: '0.01em', whiteSpace: 'nowrap',
-        }}>
+        <a
+          href="/anmelden"
+          className="inline-flex items-center text-[12px] md:text-[15px] py-[10px] px-[20px] md:py-[14px] md:px-[30px] whitespace-nowrap self-start"
+          style={{
+            gap: 8, borderRadius: 999,
+            background: GOLD, color: '#0C0A06',
+            fontWeight: 500, textDecoration: 'none',
+            letterSpacing: '0.01em',
+          }}
+        >
           Jetzt unverbindlich Angebote erhalten <span aria-hidden>→</span>
         </a>
 
         {/* Trust points */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 30 }}>
+        <div className="mt-[20px] md:mt-[30px] gap-[8px] md:gap-[12px]" style={{ display: 'flex', flexDirection: 'column' }}>
           {TRUST_POINTS.map((t, i) => (
             <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               {TRUST_ICONS[i]}
-              <span style={{ fontSize: 14, color: 'rgba(255,252,244,0.92)', lineHeight: 1.4 }}>{t}</span>
+              <span style={{ fontSize: 'clamp(12px, 1.2vw, 14px)', color: 'rgba(255,252,244,0.92)', lineHeight: 1.4 }}>{t}</span>
             </div>
           ))}
         </div>
 
-        {/* Mobile-only stat card — below trust bullets */}
-        <div className="inline-flex md:hidden" style={{
-          marginTop: 20,
-          flexDirection: 'column', alignItems: 'center', gap: 6,
-          padding: '14px 24px', borderRadius: 18,
-          background: 'rgba(18,14,7,0.52)',
-          border: '1px solid rgba(255,255,255,0.16)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-            <path d="M2 9.5L10 3l8 6.5V19H13v-5.5H7V19H2V9.5z"
-              stroke={GOLD} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
-          </svg>
-          <span style={{ fontSize: 30, fontWeight: 300, color: 'rgba(255,252,244,0.95)', lineHeight: 1.05, marginTop: 6 }}>450</span>
-          <span style={{ fontSize: 12, color: 'rgba(255,252,244,0.88)', textAlign: 'center', lineHeight: 1.55, marginTop: 2 }}>aktuelle<br />Wohnchancen</span>
+        {/* Mobile-only stat card — centered below trust bullets */}
+        <div className="flex md:hidden" style={{ marginTop: 14 }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '8px 18px', borderRadius: 14,
+            background: 'rgba(18,14,7,0.52)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M2 9.5L10 3l8 6.5V19H13v-5.5H7V19H2V9.5z"
+                stroke={GOLD} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: 22, fontWeight: 300, color: 'rgba(255,252,244,0.95)', lineHeight: 1.05, marginTop: 2 }}>450</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,252,244,0.88)', textAlign: 'center', lineHeight: 1.55 }}>aktuelle<br />Wohnchancen</span>
+          </div>
         </div>
       </div>
 
@@ -312,7 +375,7 @@ function ConceptDiagram() {
   return (
     <svg
       width="490" height="450" viewBox="0 0 326 300"
-      className="max-w-[270px] md:max-w-none"
+      className="max-w-[220px] xl:max-w-none"
       style={{ overflow: 'visible', display: 'block', width: 'min(490px, 100%)', height: 'auto' }}
     >
       <defs>
@@ -385,34 +448,36 @@ function MF1Content() {
       }} />
 
       <div
-        className="flex-col items-center md:flex-row md:items-center md:justify-between pt-[80px] md:pt-[120px]"
+        className="flex-col items-center justify-center xl:flex-row md:items-center xl:justify-between pt-[100px] md:pt-[120px] pb-[24px] md:pb-[clamp(54px,7vh,82px)]"
         style={{
           position: 'absolute', inset: 0,
           display: 'flex',
           paddingLeft: 'clamp(20px,9vw,148px)',
           paddingRight: 'clamp(20px,6vw,96px)',
-          paddingBottom: 'clamp(54px,7vh,82px)',
-          gap: 'clamp(14px, 3vw, 60px)',
+          gap: 'clamp(10px, 2vw, 60px)',
         }}
       >
         {/* Left: text */}
-        <div className="w-full md:w-auto" style={{ flex: '1 1 380px', maxWidth: 500 }}>
-          <p style={{
+        <div className="w-full xl:w-auto xl:flex-[1_1_380px]" style={{ maxWidth: 500 }}>
+          <p className="hidden md:block" style={{
             fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
             color: GOLD, opacity: 0.85, margin: '0 0 16px',
           }}>KONZEPT</p>
 
-          <h2 style={{
-            fontSize: 'clamp(30px, 4.0vw, 54px)', fontWeight: 300, lineHeight: 1.10,
-            color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
-            fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
-          }}>
+          <h2
+            className="mb-[10px] md:mb-[24px]"
+            style={{
+              fontSize: 'clamp(20px, 3.4vw, 54px)', fontWeight: 300, lineHeight: 1.10,
+              color: 'rgba(255,252,244,0.96)', marginTop: 0,
+              fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+            }}
+          >
             Wenn sich das Leben verändert, verändert sich auch die Wohnung.
           </h2>
 
           {MF1_BODY.map((p, i) => (
-            <p key={i} className="mb-[10px] md:mb-[14px]" style={{
-              fontSize: 16, fontWeight: 300, lineHeight: 1.75,
+            <p key={i} className="mb-[8px] md:mb-[14px] leading-[1.5] md:leading-[1.75]" style={{
+              fontSize: 'clamp(11px, 1.2vw, 16px)', fontWeight: 300,
               color: 'rgba(255,252,244,0.86)', marginTop: 0, marginLeft: 0, marginRight: 0, maxWidth: 450,
             }}>{p}</p>
           ))}
@@ -420,7 +485,7 @@ function MF1Content() {
 
         {/* Right: glass card with SVG diagram */}
         <div
-          className="md:w-auto"
+          className="xl:w-auto"
           style={{
             flex: '0 0 auto',
             padding: 'clamp(10px,2.5vw,36px) clamp(12px,2vw,32px)',
@@ -475,34 +540,41 @@ function MF2Content() {
         background: 'linear-gradient(to right, rgba(4,3,2,0.68) 0%, rgba(4,3,2,0.52) 22%, rgba(4,3,2,0.26) 46%, rgba(4,3,2,0.09) 62%, transparent 76%)',
       }} />
 
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        paddingTop: 'clamp(82px, 13vh, 136px)',
-        paddingLeft: 'clamp(20px,9vw,148px)',
-        paddingRight: 'clamp(40px,6vw,96px)',
-        paddingBottom: 'clamp(54px,7vh,82px)',
-        gap: 'clamp(28px, 4vw, 60px)',
-      }}>
+      <div
+        className="flex flex-col justify-center md:flex-row md:items-center md:justify-between pb-7 md:pb-[clamp(54px,7vh,82px)]"
+        style={{
+          position: 'absolute', inset: 0,
+          paddingTop: 'clamp(82px, 13vh, 136px)',
+          paddingLeft: 'clamp(20px,9vw,148px)',
+          paddingRight: 'clamp(20px,6vw,96px)',
+          gap: 'clamp(10px, 4vw, 60px)',
+        }}
+      >
         {/* Left: label + headline + intro */}
-        <div style={{ flex: '1 1 300px', maxWidth: 420, minWidth: 0 }}>
-          <p style={{
+        <div className="w-full md:w-auto md:flex-[1_1_300px]" style={{ maxWidth: 420, minWidth: 0 }}>
+          <p className="hidden md:block" style={{
             fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
             color: GOLD, opacity: 0.85, margin: '0 0 16px',
           }}>MATCHING</p>
-          <h2 style={{
-            fontSize: 'clamp(32px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.09,
-            color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
-            fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
-          }}>Intelligent verbunden.</h2>
-          <p style={{
-            fontSize: 16, fontWeight: 300, lineHeight: 1.75,
-            color: 'rgba(255,252,244,0.82)', margin: '0 0 24px', maxWidth: 360,
-          }}>
+          <h2
+            className="mb-[10px] md:mb-[24px]"
+            style={{
+              fontSize: 'clamp(22px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.09,
+              color: 'rgba(255,252,244,0.96)', marginTop: 0,
+              fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+            }}
+          >Intelligent verbunden.</h2>
+          <p
+            className="mb-[10px] md:mb-[24px]"
+            style={{
+              fontSize: 'clamp(13px, 1.6vw, 16px)', fontWeight: 300, lineHeight: 1.75,
+              color: 'rgba(255,252,244,0.82)', marginTop: 0, maxWidth: 360,
+            }}
+          >
             In wenigen Schritten vom Wohnprofil zur passenden Wohnung.
           </p>
           <p style={{
-            fontSize: 13, fontWeight: 300, lineHeight: 1.60,
+            fontSize: 'clamp(11px, 1.2vw, 13px)', fontWeight: 300, lineHeight: 1.60,
             color: 'rgba(255,252,244,0.60)', margin: 0, maxWidth: 340,
           }}>
             Homelio begleitet den Ablauf strukturiert: vom Erfassen Ihres Wohnprofils
@@ -511,11 +583,11 @@ function MF2Content() {
         </div>
 
         {/* Right: vertical 5-step cards */}
-        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', maxWidth: 380, minWidth: 0 }}>
+        <div className="w-full md:w-auto" style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', maxWidth: 380, minWidth: 0 }}>
           {STEPS.map((step, i) => (
             <div key={step.n}>
               <div style={{
-                padding: '11px 14px', borderRadius: 12,
+                padding: 'clamp(6px,1.2vw,11px) clamp(10px,1.3vw,14px)', borderRadius: 12,
                 background: i === 0 ? 'rgba(18,14,7,0.64)' : 'rgba(18,14,7,0.44)',
                 border: i === 0 ? '1px solid rgba(201,168,76,0.32)' : '1px solid rgba(255,255,255,0.12)',
                 boxShadow: i === 0 ? '0 4px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(201,168,76,0.10)' : '0 2px 12px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -530,18 +602,18 @@ function MF2Content() {
                   }}>{step.n}</div>
                   <div>
                     <div style={{
-                      fontSize: 13, fontWeight: 500,
+                      fontSize: 'clamp(11px, 1.2vw, 13px)', fontWeight: 500,
                       color: 'rgba(255,255,255,0.90)', marginBottom: 3,
                     }}>{step.title}</div>
                     <div style={{
-                      fontSize: 12, fontWeight: 300, lineHeight: 1.55,
-                      color: 'rgba(255,255,255,0.50)',
+                      fontSize: 'clamp(10px, 1.0vw, 12px)', fontWeight: 300, lineHeight: 1.55,
+                      color: 'rgba(255,252,244,0.72)',
                     }}>{step.body}</div>
                   </div>
                 </div>
               </div>
               {i < STEPS.length - 1 && (
-                <div style={{ display: 'flex', paddingLeft: 21, height: 11, alignItems: 'center' }}>
+                <div style={{ display: 'flex', paddingLeft: 21, height: 'clamp(5px, 1.0vw, 11px)', alignItems: 'center' }}>
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                     <line x1="5" y1="0" x2="5" y2="7" stroke="rgba(255,255,255,0.20)" strokeWidth="1.2" />
                     <path d="M2 5l3 3 3-3" stroke="rgba(255,255,255,0.20)" strokeWidth="1.2"
@@ -573,45 +645,58 @@ function MF3Content() {
       }} />
 
       {/* Left text + CTA */}
-      <div style={{
-        position: 'absolute',
-        top: '53%',
-        transform: 'translateY(-50%)',
-        left: 'clamp(20px, 9vw, 148px)',
-        maxWidth: 'min(520px, calc(100vw - 40px))',
-      }}>
-        <p style={{
+      <div
+        className="top-[50%] -translate-y-1/2 md:top-[53%]"
+        style={{
+          position: 'absolute',
+          left: 'clamp(20px, 9vw, 148px)',
+          maxWidth: 'min(520px, calc(100vw - 40px))',
+        }}
+      >
+        <p className="hidden md:block" style={{
           fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase',
           color: GOLD, opacity: 0.85, margin: '0 0 16px',
         }}>ANGEBOTE</p>
-        <h2 style={{
-          fontSize: 'clamp(32px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.10,
-          color: 'rgba(255,252,244,0.96)', margin: '0 0 24px',
-          fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
-        }}>
+        <h2
+          className="mb-[12px] md:mb-[24px]"
+          style={{
+            fontSize: 'clamp(22px, 4.6vw, 64px)', fontWeight: 300, lineHeight: 1.10,
+            color: 'rgba(255,252,244,0.96)', marginTop: 0,
+            fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+          }}
+        >
           Persönliche Angebote.<br />Früh und passend.
         </h2>
-        <p style={{
-          fontSize: 16, fontWeight: 300, lineHeight: 1.75,
-          color: 'rgba(255,252,244,0.86)', margin: '0 0 24px', maxWidth: 460,
-        }}>
+        <p
+          className="mb-[12px] md:mb-[24px]"
+          style={{
+            fontSize: 'clamp(13px, 1.4vw, 16px)', fontWeight: 300, lineHeight: 1.75,
+            color: 'rgba(255,252,244,0.86)', marginTop: 0, maxWidth: 460,
+          }}
+        >
           Erhalten Sie persönliche Angebote, bevor Wohnungen öffentlich ausgeschrieben
           werden – diskret, passend und ohne den üblichen Konkurrenzdruck.
         </p>
-        <p style={{
-          fontSize: 14, fontWeight: 300, lineHeight: 1.65,
-          color: 'rgba(255,252,244,0.62)', margin: '0 0 32px', maxWidth: 420,
-        }}>
+        <p
+          className="mb-[16px] md:mb-[32px]"
+          style={{
+            fontSize: 'clamp(12px, 1.2vw, 14px)', fontWeight: 300, lineHeight: 1.65,
+            color: 'rgba(255,252,244,0.62)', marginTop: 0, maxWidth: 420,
+          }}
+        >
           Einmal registrieren genügt. Homelio informiert Sie, sobald eine passende
           Wohnchance entsteht.
         </p>
-        <a href="/anmelden" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '14px 30px', borderRadius: 999,
-          background: GOLD, color: '#0C0A06',
-          fontSize: 15, fontWeight: 500, textDecoration: 'none',
-          letterSpacing: '0.01em', whiteSpace: 'nowrap',
-        }}>
+        <a
+          href="/anmelden"
+          className="inline-flex items-center text-[12px] md:text-[15px] py-[10px] px-[20px] md:py-[14px] md:px-[30px] whitespace-nowrap"
+          style={{
+            gap: 8, borderRadius: 999,
+            background: GOLD, color: '#0C0A06',
+            fontWeight: 500, textDecoration: 'none',
+            letterSpacing: '0.01em',
+          }}
+        >
           Jetzt unverbindlich Angebote erhalten <span aria-hidden>→</span>
         </a>
       </div>
@@ -944,6 +1029,25 @@ export default function HomelioScrollytellingStable() {
       }}>
         <ActiveMF />
       </div>
+
+      {/* ── Layer 3.5: mobile top contrast gradient — logo readability, always visible ── */}
+      <div
+        className="block md:hidden"
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          height: 190, zIndex: 10, pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, rgba(255,252,244,0.34) 0%, rgba(255,252,244,0.24) 42px, rgba(255,252,244,0.13) 92px, rgba(4,3,2,0.06) 135px, transparent 190px)',
+        }}
+      />
+      {/* ── Layer 3.5: desktop top contrast gradient — logo readability, always visible ── */}
+      <div
+        className="hidden md:block"
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          height: 210, zIndex: 10, pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, rgba(255,252,244,0.24) 0%, rgba(255,252,244,0.16) 55px, rgba(255,252,244,0.08) 125px, transparent 210px)',
+        }}
+      />
 
       {/* ── Layer 4: navigation — always visible ── */}
       <TopNav onJump={jumpTo} />
