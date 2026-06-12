@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { HeaderAuthButton } from '@/components/landing/HeaderAuthButton';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
@@ -142,12 +143,12 @@ function TopNav({ onJump }: { onJump: (mf: MFIndex) => void }) {
             padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 12, fontWeight: 400, borderRadius: 999, color: 'rgba(255,255,255,0.82)',
           }}>Angebote</button>
-          <a href="/anmelden" style={{
+          <HeaderAuthButton style={{
             marginLeft: 4, padding: '6px 14px', borderRadius: 999,
             background: GOLD, color: '#0C0A06',
             fontSize: 12, fontWeight: 500, textDecoration: 'none',
             whiteSpace: 'nowrap', letterSpacing: '0.01em',
-          }}>Anmelden</a>
+          }} />
         </nav>
       </div>
 
@@ -166,12 +167,12 @@ function TopNav({ onJump }: { onJump: (mf: MFIndex) => void }) {
           <button onClick={() => onJump(1)} style={navBtnStyle()}>Konzept</button>
           <button onClick={() => onJump(2)} style={navBtnStyle()}>Wohnung finden</button>
           <button onClick={() => onJump(3)} style={navBtnStyle()}>Angebote</button>
-          <a href="/anmelden" style={{
+          <HeaderAuthButton style={{
             marginLeft: 6, padding: '7px 18px', borderRadius: 999,
             background: GOLD, color: '#0C0A06',
             fontSize: 13, fontWeight: 500, textDecoration: 'none',
             whiteSpace: 'nowrap', letterSpacing: '0.01em',
-          }}>Anmelden</a>
+          }} />
         </nav>
       </div>
     </div>

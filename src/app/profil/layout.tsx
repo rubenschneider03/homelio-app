@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
-import Link from 'next/link'
 import { HomelioLogo } from '@/components/ui/HomelioLogo'
 import { ProfilTabNav } from '@/components/profil/ProfilTabNav'
 import { ProfileCompletionModal } from '@/components/profil/ProfileCompletionModal'
+import { LogoutButton } from '@/components/profil/LogoutButton'
 
 export const metadata: Metadata = {
   title: 'Profil – Homelio',
@@ -31,17 +31,7 @@ export default function ProfilLayout({ children }: { children: ReactNode }) {
         {/* Top bar: logo + logout */}
         <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           <HomelioLogo height={84} href="/" />
-          <Link
-            href="/"
-            style={{
-              position: 'absolute', right: 0,
-              fontSize: 12, color: 'rgba(245,245,244,0.35)',
-              textDecoration: 'none', letterSpacing: '0.04em',
-              padding: '6px 0',
-            }}
-          >
-            Abmelden
-          </Link>
+          <LogoutButton />
         </div>
 
         {/* Tab nav */}
