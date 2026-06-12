@@ -387,7 +387,7 @@ export function MatchList() {
 
   // ── Tab categorisation ────────────────────────────────────────────────────────
 
-  const empfehlungen = matches.filter(m => m.my_status === 'pending' && !m.is_mutual)
+  const empfehlungen = matches.filter(m => m.my_status === 'pending' && m.other_status !== 'interested' && !m.is_mutual)
   const gegenseite   = matches.filter(m => m.other_status === 'interested' && m.my_status !== 'interested' && !m.is_mutual)
   const beidseitig   = matches.filter(m => m.is_mutual)
 
