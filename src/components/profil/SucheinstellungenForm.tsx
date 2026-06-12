@@ -257,6 +257,9 @@ export function SucheinstellungenForm() {
 
     setSaving(false)
     setSaveSuccess(true)
+
+    // Trigger matching in background — failure is silent and never blocks the user.
+    fetch('/api/run-matching', { method: 'POST' }).catch(() => {})
   }
 
   return (

@@ -216,12 +216,21 @@ export function MeineWohnungForm() {
     const buildYear = parseInt(buildParts[0]?.trim(), 10) || null
     const renovYear = parseInt(buildParts[1]?.trim(), 10) || null
 
+    // Determine apartment status: active only when the three fields run_matching() requires are present.
+    const parsedRooms = parseFloat(f.rooms)
+    const parsedRentGross = parseInt(t.rentGross, 10)
+    const hasRequiredForMatching =
+      t.city.trim().length > 0 &&
+      Number.isFinite(parsedRooms) && parsedRooms > 0 &&
+      Number.isFinite(parsedRentGross) && parsedRentGross > 0
+    const aptStatus: 'active' | 'draft' = hasRequiredForMatching ? 'active' : 'draft'
+
     const { error: aptError } = await supabase
       .from('apartments')
       .upsert(
         {
           user_id: user.id,
-          status: 'draft',
+          status: aptStatus,
           street: t.street,
           house_nr: t.houseNr,
           zip: t.zip,
@@ -272,6 +281,9 @@ export function MeineWohnungForm() {
 
     setSaving(false)
     setSaveSuccess(true)
+
+    // Trigger matching in background — failure is silent and never blocks the user.
+    fetch('/api/run-matching', { method: 'POST' }).catch(() => {})
   }
 
   return (

@@ -13,9 +13,10 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'
   options: SelectOption[]
   optional?: boolean
   placeholder?: string
+  hint?: string
 }
 
-export function Select({ label, id, options, optional, placeholder, value, ...rest }: SelectProps) {
+export function Select({ label, id, options, optional, placeholder, hint, value, ...rest }: SelectProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
   const hasValue = value !== '' && value !== undefined
 
@@ -62,6 +63,10 @@ export function Select({ label, id, options, optional, placeholder, value, ...re
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
+
+      {hint && (
+        <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.35)', lineHeight: 1.5 }}>{hint}</span>
+      )}
     </div>
   )
 }
