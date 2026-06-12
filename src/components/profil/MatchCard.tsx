@@ -27,7 +27,7 @@ interface MatchCardProps {
   accepted: boolean
   onAccept: () => void
   onDecline: () => void
-  variant?: 'mutual'
+  variant?: 'mutual' | 'waiting'
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -61,7 +61,7 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
   return (
     <div style={{
       background: 'rgba(18,14,8,0.65)',
-      border: `1px solid ${accepted ? 'rgba(80,200,100,0.25)' : 'rgba(255,255,255,0.08)'}`,
+      border: `1px solid ${variant === 'mutual' ? 'rgba(80,200,100,0.22)' : variant === 'waiting' ? 'rgba(212,168,83,0.18)' : accepted ? 'rgba(80,200,100,0.25)' : 'rgba(255,255,255,0.08)'}`,
       borderRadius: 16,
       overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
@@ -254,6 +254,33 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
             <span style={{ fontSize: 13, color: 'rgba(245,245,244,0.45)', lineHeight: 1.6 }}>
               Beide Seiten haben Interesse signalisiert. Homelio bereitet den nächsten Schritt vor.
             </span>
+          </div>
+        ) : variant === 'waiting' ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 10,
+            background: 'rgba(212,168,83,0.05)',
+            border: '1px solid rgba(212,168,83,0.16)',
+            borderRadius: 10, padding: '18px 20px',
+          }}>
+            <span style={{ fontSize: 14, color: 'rgba(212,168,83,0.85)', fontWeight: 500 }}>
+              Interesse übermittelt — wartet auf Gegenseite
+            </span>
+            <span style={{ fontSize: 13, color: 'rgba(245,245,244,0.45)', lineHeight: 1.6 }}>
+              Sobald die andere Seite ebenfalls Interesse signalisiert, entsteht ein beidseitiger Match.
+            </span>
+            <button
+              onClick={onDecline}
+              style={{
+                alignSelf: 'flex-start',
+                background: 'none', border: 'none',
+                fontSize: 12, color: 'rgba(245,245,244,0.30)',
+                cursor: 'pointer', fontFamily: 'inherit',
+                padding: '4px 0', marginTop: 2,
+                textDecoration: 'underline', textUnderlineOffset: '3px',
+              }}
+            >
+              Interesse zurückziehen
+            </button>
           </div>
         ) : accepted ? (
           <div style={{

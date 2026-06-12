@@ -96,7 +96,7 @@ function toMatchApartment(row: MatchCardRow): MatchApartment {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SubTab = 'empfehlungen' | 'gegenseite' | 'beidseitig'
+type SubTab = 'empfehlungen' | 'gegenseite' | 'warten' | 'beidseitig'
 
 // ── Sub-tab bar ───────────────────────────────────────────────────────────────
 
@@ -107,12 +107,13 @@ function SubTabBar({
 }: {
   active: SubTab
   onChange: (t: SubTab) => void
-  counts: { empfehlungen: number; gegenseite: number; beidseitig: number }
+  counts: { empfehlungen: number; gegenseite: number; warten: number; beidseitig: number }
 }) {
   const tabs: { id: SubTab; label: string; count: number }[] = [
     { id: 'empfehlungen', label: 'Homelio Empfehlungen', count: counts.empfehlungen },
-    { id: 'gegenseite', label: 'Von Gegenseite angenommen', count: counts.gegenseite },
-    { id: 'beidseitig', label: 'Beidseitige Matches', count: counts.beidseitig },
+    { id: 'gegenseite',   label: 'Von Gegenseite angenommen', count: counts.gegenseite },
+    { id: 'warten',       label: 'Wartet auf Gegenseite', count: counts.warten },
+    { id: 'beidseitig',   label: 'Beidseitige Matches', count: counts.beidseitig },
   ]
 
   return (
@@ -283,18 +284,14 @@ function PremiumGate({ count }: { count: number }) {
 
 interface CardListProps {
   apartments: MatchApartment[]
-  acceptedIds: string[]
-  declinedIds: string[]
-  onAccept: (id: string) => void
-  onDecline: (id: string) => void
-  variant?: 'mutual'
+  onAccept?: (id: string, title: string) => void
+  onDecline?: (id: string) => void
+  variant?: 'mutual' | 'waiting'
   emptyMessage?: string
 }
 
-function CardList({ apartments, acceptedIds, declinedIds, onAccept, onDecline, variant, emptyMessage }: CardListProps) {
-  const visible = apartments.filter(a => !declinedIds.includes(a.id))
-
-  if (visible.length === 0) {
+function CardList({ apartments, onAccept, onDecline, variant, emptyMessage }: CardListProps) {
+  if (apartments.length === 0) {
     return (
       <div style={{
         background: 'rgba(18,14,8,0.55)',
@@ -313,13 +310,13 @@ function CardList({ apartments, acceptedIds, declinedIds, onAccept, onDecline, v
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {visible.map(apt => (
+      {apartments.map(apt => (
         <MatchCard
           key={apt.id}
           apartment={apt}
-          accepted={acceptedIds.includes(apt.id)}
-          onAccept={() => onAccept(apt.id)}
-          onDecline={() => onDecline(apt.id)}
+          accepted={false}
+          onAccept={() => onAccept?.(apt.id, apt.title)}
+          onDecline={() => onDecline?.(apt.id)}
           variant={variant}
         />
       ))}
@@ -338,74 +335,83 @@ export function MatchList() {
   const [loadingData, setLoadingData] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
 
   // ── UI state ──
   const [activeTab, setActiveTab] = useState<SubTab>('empfehlungen')
-  const [recAcceptedIds, setRecAcceptedIds] = useState<string[]>([])
-  const [recDeclinedIds, setRecDeclinedIds] = useState<string[]>([])
-  const [otherAcceptedIds, setOtherAcceptedIds] = useState<string[]>([])
-  const [otherDeclinedIds, setOtherDeclinedIds] = useState<string[]>([])
   const [notifyRec, setNotifyRec] = useState(true)
   const [notifyGegenseite, setNotifyGegenseite] = useState(true)
   const [notifyBeidseitig, setNotifyBeidseitig] = useState(true)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
-  const [acceptingTab, setAcceptingTab] = useState<'empfehlungen' | 'gegenseite'>('empfehlungen')
+  const [acceptingAptTitle, setAcceptingAptTitle] = useState<string | null>(null)
 
-  // ── Load data on mount ────────────────────────────────────────────────────────
+  // ── Data fetching ─────────────────────────────────────────────────────────────
+
+  async function loadMatches() {
+    const supabase = createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.replace('/anmelden')
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user.id)
+      .single()
+    setIsPremium(profile?.is_premium ?? false)
+
+    const { data, error } = await supabase.rpc('get_my_match_cards')
+    if (error) {
+      setLoadError('Beim Laden der Matches ist ein Fehler aufgetreten.')
+      setLoadingData(false)
+      return
+    }
+
+    setMatches((data as MatchCardRow[]) ?? [])
+    setLoadingData(false)
+  }
+
+  // Lightweight refresh after actions — does not touch loadingData or loadError.
+  async function refreshMatches() {
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('get_my_match_cards')
+    if (!error && data) {
+      setMatches(data as MatchCardRow[])
+    }
+  }
 
   useEffect(() => {
-    async function loadMatches() {
-      const supabase = createClient()
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.replace('/anmelden')
-        return
-      }
-
-      // Load is_premium
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_premium')
-        .eq('id', user.id)
-        .single()
-      setIsPremium(profile?.is_premium ?? false)
-
-      // Load match cards via SECURITY DEFINER RPC
-      const { data, error } = await supabase.rpc('get_my_match_cards')
-      if (error) {
-        setLoadError('Beim Laden der Matches ist ein Fehler aufgetreten.')
-        setLoadingData(false)
-        return
-      }
-
-      setMatches((data as MatchCardRow[]) ?? [])
-      setLoadingData(false)
-    }
     loadMatches()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Tab categorisation ────────────────────────────────────────────────────────
+  // ── Tab categorisation (mutually exclusive) ───────────────────────────────────
 
-  const empfehlungen = matches.filter(m => m.my_status === 'pending' && m.other_status !== 'interested' && !m.is_mutual)
-  const gegenseite   = matches.filter(m => m.other_status === 'interested' && m.my_status !== 'interested' && !m.is_mutual)
+  const empfehlungen = matches.filter(m => m.my_status === 'pending'    && m.other_status === 'pending'    && !m.is_mutual)
+  const gegenseite   = matches.filter(m => m.other_status === 'interested' && m.my_status === 'pending'    && !m.is_mutual)
+  const warten       = matches.filter(m => m.my_status === 'interested'  && m.other_status === 'pending'   && !m.is_mutual)
   const beidseitig   = matches.filter(m => m.is_mutual)
 
   const empfehlungenApts = empfehlungen.map(toMatchApartment)
   const gegenseiteApts   = gegenseite.map(toMatchApartment)
+  const wartenApts       = warten.map(toMatchApartment)
   const beidseitigApts   = beidseitig.map(toMatchApartment)
 
-  // ── Accept / decline actions ──────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────────
 
-  function openModal(id: string, tab: 'empfehlungen' | 'gegenseite') {
+  function openModal(id: string, title: string) {
     setAcceptingId(id)
-    setAcceptingTab(tab)
+    setAcceptingAptTitle(title)
     setActionError('')
   }
 
   async function handleConfirmed() {
-    const id = acceptingId // capture before async gap
-    if (!id) return
+    if (!acceptingId || actionLoading) return
+    const id = acceptingId
+    setActionLoading(true)
+    setActionError('')
 
     const supabase = createClient()
     const { error } = await supabase.rpc('express_interest', {
@@ -413,23 +419,24 @@ export function MatchList() {
       p_decision: 'interested',
     })
 
+    setActionLoading(false)
+
     if (error) {
       setActionError('Beim Aktualisieren des Matches ist ein Fehler aufgetreten.')
       setAcceptingId(null)
+      setAcceptingAptTitle(null)
       return
     }
 
-    if (acceptingTab === 'empfehlungen') setRecAcceptedIds(prev => [...prev, id])
-    else setOtherAcceptedIds(prev => [...prev, id])
-    setAcceptingId(null)
+    // Reload matches while AcceptModal shows its success state.
+    // Modal stays visible until the user clicks "Schliessen" → onClose fires.
+    await refreshMatches()
   }
 
-  async function handleDecline(matchId: string, tab: 'empfehlungen' | 'gegenseite') {
+  async function handleDecline(matchId: string) {
+    if (actionLoading) return
     setActionError('')
-
-    // Optimistic: remove card immediately
-    if (tab === 'empfehlungen') setRecDeclinedIds(prev => [...prev, matchId])
-    else setOtherDeclinedIds(prev => [...prev, matchId])
+    setActionLoading(true)
 
     const supabase = createClient()
     const { error } = await supabase.rpc('express_interest', {
@@ -437,19 +444,14 @@ export function MatchList() {
       p_decision: 'declined',
     })
 
+    setActionLoading(false)
+
     if (error) {
-      // Revert optimistic update
-      if (tab === 'empfehlungen') setRecDeclinedIds(prev => prev.filter(id => id !== matchId))
-      else setOtherDeclinedIds(prev => prev.filter(id => id !== matchId))
       setActionError('Beim Aktualisieren des Matches ist ein Fehler aufgetreten.')
+    } else {
+      await refreshMatches()
     }
   }
-
-  // ── Modal apartment lookup ────────────────────────────────────────────────────
-
-  const acceptingApt = acceptingId
-    ? [...empfehlungenApts, ...gegenseiteApts].find(a => a.id === acceptingId) ?? null
-    : null
 
   // ── Loading state ─────────────────────────────────────────────────────────────
 
@@ -512,8 +514,9 @@ export function MatchList() {
             onChange={setActiveTab}
             counts={{
               empfehlungen: empfehlungenApts.length,
-              gegenseite: gegenseiteApts.length,
-              beidseitig: beidseitigApts.length,
+              gegenseite:   gegenseiteApts.length,
+              warten:       wartenApts.length,
+              beidseitig:   beidseitigApts.length,
             }}
           />
         </div>
@@ -552,10 +555,8 @@ export function MatchList() {
             </p>
             <CardList
               apartments={empfehlungenApts}
-              acceptedIds={recAcceptedIds}
-              declinedIds={recDeclinedIds}
-              onAccept={id => openModal(id, 'empfehlungen')}
-              onDecline={id => handleDecline(id, 'empfehlungen')}
+              onAccept={openModal}
+              onDecline={handleDecline}
               emptyMessage="Noch keine Empfehlungen"
             />
           </>
@@ -582,15 +583,31 @@ export function MatchList() {
             {isPremium ? (
               <CardList
                 apartments={gegenseiteApts}
-                acceptedIds={otherAcceptedIds}
-                declinedIds={otherDeclinedIds}
-                onAccept={id => openModal(id, 'gegenseite')}
-                onDecline={id => handleDecline(id, 'gegenseite')}
+                onAccept={openModal}
+                onDecline={handleDecline}
                 emptyMessage="Noch keine Annahmen der Gegenseite"
               />
             ) : (
               <PremiumGate count={gegenseiteApts.length} />
             )}
+          </>
+        )}
+
+        {/* ── Wartet auf Gegenseite ── */}
+        {activeTab === 'warten' && (
+          <>
+            <p style={{
+              fontSize: 14, color: 'rgba(245,245,244,0.45)', lineHeight: 1.72,
+              margin: 0, padding: '0 4px',
+            }}>
+              Sie haben bei diesen Wohnungen Interesse signalisiert. Homelio benachrichtigt Sie, sobald die andere Seite ebenfalls Interesse bestätigt und ein beidseitiger Match entsteht.
+            </p>
+            <CardList
+              apartments={wartenApts}
+              onDecline={handleDecline}
+              variant="waiting"
+              emptyMessage="Keine ausstehenden Annahmen"
+            />
           </>
         )}
 
@@ -604,10 +621,6 @@ export function MatchList() {
             />
             <CardList
               apartments={beidseitigApts}
-              acceptedIds={[]}
-              declinedIds={[]}
-              onAccept={() => {}}
-              onDecline={() => {}}
               variant="mutual"
               emptyMessage="Noch keine beidseitigen Matches"
             />
@@ -616,11 +629,11 @@ export function MatchList() {
 
       </div>
 
-      {/* Accept modal — shared */}
-      {acceptingApt && (
+      {/* Accept modal — stays mounted while acceptingId/Title are set, even after refreshMatches() */}
+      {acceptingId && acceptingAptTitle && (
         <AcceptModal
-          apartmentTitle={acceptingApt.title}
-          onClose={() => setAcceptingId(null)}
+          apartmentTitle={acceptingAptTitle}
+          onClose={() => { setAcceptingId(null); setAcceptingAptTitle(null) }}
           onConfirmed={handleConfirmed}
         />
       )}
