@@ -1,161 +1,98 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { MatchCard, type MatchApartment } from './MatchCard'
 import { AcceptModal } from './AcceptModal'
+import { createClient } from '@/lib/supabase/client'
 
-const isPremium = false
+// ── RPC row shape returned by get_my_match_cards() ────────────────────────────
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+interface MatchCardRow {
+  match_id: string
+  my_side: 'a' | 'b'
+  my_status: 'pending' | 'interested' | 'declined'
+  other_status: 'pending' | 'interested' | 'declined'
+  is_mutual: boolean
+  score: number | null
+  rooms: number | null
+  area_sqm: number | null
+  floor: number | null
+  rent_gross: number | null
+  rent_net: number | null
+  additional_costs: number | null
+  estimated_rent_net: number | null
+  estimated_additional_costs: number | null
+  estimated_rent_gross: number | null
+  city: string | null
+  zip: string | null
+  district: string | null
+  location_label: string | null
+  approximate_location_text: string | null
+  nearest_stop: string | null
+  transport_minutes_center: number | null
+  earliest_move_out: string | null
+  move_out_flexibility: string | null
+  has_balcony: boolean
+  has_terrace: boolean
+  has_garden: boolean
+  has_cellar: boolean
+  is_wheelchair_accessible: boolean
+  has_elevator: string | null
+  parking_type: string | null
+  laundry: string | null
+  noise_level: string | null
+  orientation: string | null
+  highlights: string | null
+}
 
-const MOCK_RECOMMENDATIONS: MatchApartment[] = [
-  {
-    id: 'match-001',
-    title: 'Helle 3.5-Zi-Wohnung in Wiedikon',
-    location: 'Zürich Wiedikon',
-    managementCompany: 'Wincasa AG',
-    available: '1. August 2026',
-    rooms: 3.5, area: 82, floor: 3,
-    rentGross: 2350, rentNet: 1980, additionalCosts: 370,
-    estimatedRentNet: 1880, estimatedAdditionalCosts: 350, estimatedRentGross: 2230,
-    matchScore: 94,
-    features: ['Balkon', 'Lift', 'Keller', 'Ruhige Innenlage', 'Südausrichtung'],
-    transport: 'Tram 2/3 Schmiede Wiedikon (4 min)',
-    description: 'Helle, gepflegte Wohnung in ruhiger Innenlage mit grossem Balkon nach Süden. Frisch renovierte Küche, Parkettböden, hohe Decken. Zentrumsnah und trotzdem ruhig.',
-    matchReasons: [
-      'Lage und Quartier entsprechen Ihren Sucheinstellungen',
-      'Miete liegt innerhalb Ihres Budgets',
-      'Balkon und Lift vorhanden',
-      'Sehr gute ÖV-Anbindung',
-    ],
-  },
-  {
-    id: 'match-002',
-    title: 'Grosszügige 4.5-Zi in Oerlikon',
-    location: 'Zürich Oerlikon',
-    managementCompany: 'UBS Fondsverwaltung',
-    available: '1. September 2026',
-    rooms: 4.5, area: 112, floor: 2,
-    rentGross: 2890, rentNet: 2480, additionalCosts: 410,
-    estimatedRentNet: 2350, estimatedAdditionalCosts: 390, estimatedRentGross: 2740,
-    matchScore: 81,
-    features: ['Grosse Terrasse', 'Tiefgarage', 'Waschmaschine in Wohnung', 'Neubau 2019', 'Minergie-Standard'],
-    transport: 'Bhf. Oerlikon (6 min zu Fuss)',
-    description: 'Moderner Neubau im Minergie-Standard mit grosser Terrasse und eigenem Waschmaschinenanschluss. Ruhige Lage mit direktem Zugang zum Tiefgaragenplatz. Ideal für Familien oder Home-Office.',
-    matchReasons: [
-      'Grosszügige Fläche passt zu Ihrer Haushaltsgrösse',
-      'Waschmaschine in der Wohnung vorhanden',
-      'Sehr gute Anbindung an den Hauptbahnhof',
-      'Neubaustandard entspricht Ihrer Qualitätspräferenz',
-    ],
-  },
-  {
-    id: 'match-003',
-    title: 'Charmante 2.5-Zi in Höngg',
-    location: 'Zürich Höngg',
-    managementCompany: 'Privat',
-    available: '1. Juli 2026',
-    rooms: 2.5, area: 65, floor: 1,
-    rentGross: 1780, rentNet: 1540, additionalCosts: 240,
-    estimatedRentNet: 1460, estimatedAdditionalCosts: 225, estimatedRentGross: 1685,
-    matchScore: 76,
-    features: ['Balkon', 'Keller', 'Ruhige Wohnlage', 'Parkettboden', 'Altbaucharme'],
-    transport: 'Bus 40 Regensdorferstrasse (3 min)',
-    description: 'Charmante Altbauwohnung mit Parkettboden und hohen Decken. Ruhige Wohnlage am Stadtrand, kurze Busverbindung ins Zentrum. Privat vermietet — persönlicher Kontakt zum Eigentümer.',
-    matchReasons: [
-      'Frühester Einzugstermin entspricht Ihrem Wunschdatum',
-      'Miete deutlich unter Ihrem Maximalbudget',
-      'Ruhige Wohnlage mit ÖV-Anbindung',
-      'Balkon vorhanden',
-    ],
-  },
-]
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const MOCK_ACCEPTED_BY_OTHER: MatchApartment[] = [
-  {
-    id: 'match-004',
-    title: 'Sonnige 3-Zi-Wohnung in Aussersihl',
-    location: 'Zürich Aussersihl',
-    managementCompany: 'Livit AG',
-    available: '1. August 2026',
-    rooms: 3, area: 74, floor: 4,
-    rentGross: 2180, rentNet: 1870, additionalCosts: 310,
-    estimatedRentNet: 1780, estimatedAdditionalCosts: 295, estimatedRentGross: 2075,
-    matchScore: 88,
-    features: ['Südbalkon', 'Lift', 'Keller', 'Frisch renoviert', 'Hellholz-Böden'],
-    transport: 'Tram 3/14 Helvetiaplatz (3 min)',
-    description: 'Lichtdurchflutete Wohnung mit grossem Südbalkon, frisch renoviert. Ruhige Lage trotz zentraler Adresse. Neue Einbauküche, Parkett, modernes Bad. Verwaltung reagiert schnell.',
-    matchReasons: [
-      'Eigentümer hat Ihr Profil aktiv bevorzugt',
-      'Lage passt zu Ihren Sucheinstellungen',
-      'Miete liegt innerhalb Ihres Budgets',
-      'Balkon und Lift entsprechen Ihren Ausstattungswünschen',
-    ],
-  },
-  {
-    id: 'match-005',
-    title: 'Ruhige 3.5-Zi in Wipkingen',
-    location: 'Zürich Wipkingen',
-    managementCompany: 'REME Verwaltung AG',
-    available: '1. Oktober 2026',
-    rooms: 3.5, area: 88, floor: 2,
-    rentGross: 2470, rentNet: 2120, additionalCosts: 350,
-    estimatedRentNet: 2010, estimatedAdditionalCosts: 330, estimatedRentGross: 2340,
-    matchScore: 83,
-    features: ['Loggia', 'Keller', 'Waschküche im Haus', 'Ruhige Seitengasse', 'Altbaucharme'],
-    transport: 'S-Bahn Wipkingen (5 min zu Fuss)',
-    description: 'Grosszügige Altbauwohnung in ruhiger Seitengasse mit schöner Loggia. Hohe Decken, Parkettboden, Stuck. Sehr gut angebundenes Quartier mit lokaler Infrastruktur.',
-    matchReasons: [
-      'Verwaltung hat Ihr Profil aktiv als passend markiert',
-      'Haushaltsgrösse entspricht der Wohnungsgrösse',
-      'S-Bahn-Anbindung entspricht Ihrer ÖV-Präferenz',
-      'Ruhige Lage entspricht Ihrer Lärmsensibilität',
-    ],
-  },
-  {
-    id: 'match-006-other',
-    title: 'Moderne 2.5-Zi in Altstetten',
-    location: 'Zürich Altstetten',
-    managementCompany: 'Swiss Life Asset Managers',
-    available: '1. September 2026',
-    rooms: 2.5, area: 68, floor: 5,
-    rentGross: 2050, rentNet: 1780, additionalCosts: 270,
-    estimatedRentNet: 1690, estimatedAdditionalCosts: 255, estimatedRentGross: 1945,
-    matchScore: 79,
-    features: ['Terrasse', 'Tiefgarage', 'Neubau 2022', 'Minergie-P', 'Lift'],
-    transport: 'Tram 2 Lindenplatz (4 min)',
-    description: 'Helle Neubauwohnung im obersten Stockwerk mit eigener Terrasse. Minergie-P zertifiziert, sehr niedriger Energieverbrauch. Ruhige Lage nahe Grünflächen.',
-    matchReasons: [
-      'Eigentümer hat aktives Interesse an Ihrem Profil signalisiert',
-      'Terrasse und Lift vorhanden',
-      'Neubaustandard mit niedrigen Nebenkosten',
-      'Miete innerhalb Ihres Budgets',
-    ],
-  },
-]
+function formatMoveOut(dateStr: string | null): string {
+  if (!dateStr) return 'Auf Anfrage'
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('de-DE', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
 
-const MOCK_MUTUAL: MatchApartment[] = [
-  {
-    id: 'match-007-mutual',
-    title: 'Stilvolle 3.5-Zi an der Rämistrasse',
-    location: 'Zürich Hochschulen',
-    managementCompany: 'Pelichet & Cie AG',
-    available: '1. Juli 2026',
-    rooms: 3.5, area: 91, floor: 3,
-    rentGross: 2680, rentNet: 2280, additionalCosts: 400,
-    estimatedRentNet: 2160, estimatedAdditionalCosts: 380, estimatedRentGross: 2540,
-    matchScore: 97,
-    features: ['Balkon', 'Lift', 'Keller', 'Bibliothekszimmer', 'Gründerzeitbau'],
-    transport: 'Tram 6/9 ETH/Universitätsspital (2 min)',
-    description: 'Aussergewöhnliche Gründerzeitwohnung mit hohen Stuckdecken, breiten Parkett-Dielen und kleinem Bibliothekszimmer. Ideale Anbindung an ETH und Innenstadt. Sehr gepflegtes Haus.',
+function toMatchApartment(row: MatchCardRow): MatchApartment {
+  const features: string[] = []
+  if (row.has_balcony) features.push('Balkon')
+  if (row.has_terrace) features.push('Terrasse')
+  if (row.has_garden) features.push('Garten')
+  if (row.has_cellar) features.push('Keller')
+  if (row.is_wheelchair_accessible) features.push('Rollstuhlgängig')
+  if (row.has_elevator === 'yes') features.push('Lift')
+  if (row.parking_type && row.parking_type !== 'none') features.push('Parkplatz')
+  if (row.laundry === 'private') features.push('Eigene Waschmaschine')
+
+  return {
+    id: row.match_id,
+    title: `${row.rooms ?? '?'} Zi-Wohnung in ${row.district ?? row.city ?? 'Unbekannt'}`,
+    location: row.district ?? row.city ?? row.zip ?? '',
+    managementCompany: 'Verwaltung nicht öffentlich',
+    available: formatMoveOut(row.earliest_move_out),
+    rooms: row.rooms ?? 0,
+    area: row.area_sqm ?? 0,
+    floor: row.floor ?? 0,
+    rentGross: row.rent_gross ?? 0,
+    rentNet: row.rent_net ?? 0,
+    additionalCosts: row.additional_costs ?? 0,
+    estimatedRentNet: row.estimated_rent_net ?? undefined,
+    estimatedAdditionalCosts: row.estimated_additional_costs ?? undefined,
+    estimatedRentGross: row.estimated_rent_gross ?? undefined,
+    matchScore: row.score ?? 0,
+    features,
+    transport: row.nearest_stop ?? '',
+    description: row.approximate_location_text ?? row.location_label ?? row.highlights ?? '',
     matchReasons: [
-      'Beidseitiges Interesse bereits bestätigt',
-      'Höchster Matchscore aller Ihrer Empfehlungen',
-      'Lage, Grösse und Ausstattung passen exzellent',
-      'Homelio koordiniert die nächsten Schritte',
+      'Lage passt zu Ihren Suchkriterien',
+      'Miete liegt im gewünschten Rahmen',
+      'Wohnungsdaten passen zu Ihrem Profil',
     ],
-  },
-]
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -163,11 +100,19 @@ type SubTab = 'empfehlungen' | 'gegenseite' | 'beidseitig'
 
 // ── Sub-tab bar ───────────────────────────────────────────────────────────────
 
-function SubTabBar({ active, onChange }: { active: SubTab; onChange: (t: SubTab) => void }) {
-  const tabs: { id: SubTab; label: string; count?: number }[] = [
-    { id: 'empfehlungen', label: 'Homelio Empfehlungen', count: MOCK_RECOMMENDATIONS.length },
-    { id: 'gegenseite', label: 'Von Gegenseite angenommen', count: MOCK_ACCEPTED_BY_OTHER.length },
-    { id: 'beidseitig', label: 'Beidseitige Matches', count: MOCK_MUTUAL.length },
+function SubTabBar({
+  active,
+  onChange,
+  counts,
+}: {
+  active: SubTab
+  onChange: (t: SubTab) => void
+  counts: { empfehlungen: number; gegenseite: number; beidseitig: number }
+}) {
+  const tabs: { id: SubTab; label: string; count: number }[] = [
+    { id: 'empfehlungen', label: 'Homelio Empfehlungen', count: counts.empfehlungen },
+    { id: 'gegenseite', label: 'Von Gegenseite angenommen', count: counts.gegenseite },
+    { id: 'beidseitig', label: 'Beidseitige Matches', count: counts.beidseitig },
   ]
 
   return (
@@ -199,17 +144,15 @@ function SubTabBar({ active, onChange }: { active: SubTab; onChange: (t: SubTab)
             }}
           >
             {tab.label}
-            {tab.count !== undefined && (
-              <span style={{
-                fontSize: 11, fontWeight: 600,
-                background: isActive ? 'rgba(212,168,83,0.18)' : 'rgba(255,255,255,0.07)',
-                color: isActive ? '#d4a853' : 'rgba(245,245,244,0.35)',
-                borderRadius: 999, padding: '2px 7px',
-                transition: 'background 0.15s, color 0.15s',
-              }}>
-                {tab.count}
-              </span>
-            )}
+            <span style={{
+              fontSize: 11, fontWeight: 600,
+              background: isActive ? 'rgba(212,168,83,0.18)' : 'rgba(255,255,255,0.07)',
+              color: isActive ? '#d4a853' : 'rgba(245,245,244,0.35)',
+              borderRadius: 999, padding: '2px 7px',
+              transition: 'background 0.15s, color 0.15s',
+            }}>
+              {tab.count}
+            </span>
           </button>
         )
       })}
@@ -387,39 +330,160 @@ function CardList({ apartments, acceptedIds, declinedIds, onAccept, onDecline, v
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function MatchList() {
-  const [activeTab, setActiveTab] = useState<SubTab>('empfehlungen')
+  const router = useRouter()
 
-  // Empfehlungen accept/decline state
+  // ── Data state ──
+  const [matches, setMatches] = useState<MatchCardRow[]>([])
+  const [isPremium, setIsPremium] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  // ── UI state ──
+  const [activeTab, setActiveTab] = useState<SubTab>('empfehlungen')
   const [recAcceptedIds, setRecAcceptedIds] = useState<string[]>([])
   const [recDeclinedIds, setRecDeclinedIds] = useState<string[]>([])
-
-  // Gegenseite accept/decline state (only active when isPremium)
   const [otherAcceptedIds, setOtherAcceptedIds] = useState<string[]>([])
   const [otherDeclinedIds, setOtherDeclinedIds] = useState<string[]>([])
-
-  // Notification toggle state
   const [notifyRec, setNotifyRec] = useState(true)
   const [notifyGegenseite, setNotifyGegenseite] = useState(true)
   const [notifyBeidseitig, setNotifyBeidseitig] = useState(true)
-
-  // Modal state — shared across tabs
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
   const [acceptingTab, setAcceptingTab] = useState<'empfehlungen' | 'gegenseite'>('empfehlungen')
 
-  const allMock = [...MOCK_RECOMMENDATIONS, ...MOCK_ACCEPTED_BY_OTHER]
-  const acceptingApt = acceptingId ? allMock.find(m => m.id === acceptingId) ?? null : null
+  // ── Load data on mount ────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    async function loadMatches() {
+      const supabase = createClient()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace('/anmelden')
+        return
+      }
+
+      // Load is_premium
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', user.id)
+        .single()
+      setIsPremium(profile?.is_premium ?? false)
+
+      // Load match cards via SECURITY DEFINER RPC
+      const { data, error } = await supabase.rpc('get_my_match_cards')
+      if (error) {
+        setLoadError('Beim Laden der Matches ist ein Fehler aufgetreten.')
+        setLoadingData(false)
+        return
+      }
+
+      setMatches((data as MatchCardRow[]) ?? [])
+      setLoadingData(false)
+    }
+    loadMatches()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Tab categorisation ────────────────────────────────────────────────────────
+
+  const empfehlungen = matches.filter(m => m.my_status === 'pending' && !m.is_mutual)
+  const gegenseite   = matches.filter(m => m.other_status === 'interested' && m.my_status !== 'interested' && !m.is_mutual)
+  const beidseitig   = matches.filter(m => m.is_mutual)
+
+  const empfehlungenApts = empfehlungen.map(toMatchApartment)
+  const gegenseiteApts   = gegenseite.map(toMatchApartment)
+  const beidseitigApts   = beidseitig.map(toMatchApartment)
+
+  // ── Accept / decline actions ──────────────────────────────────────────────────
 
   function openModal(id: string, tab: 'empfehlungen' | 'gegenseite') {
     setAcceptingId(id)
     setAcceptingTab(tab)
+    setActionError('')
   }
 
-  function handleConfirmed() {
-    if (!acceptingId) return
-    if (acceptingTab === 'empfehlungen') setRecAcceptedIds(prev => [...prev, acceptingId])
-    else setOtherAcceptedIds(prev => [...prev, acceptingId])
+  async function handleConfirmed() {
+    const id = acceptingId // capture before async gap
+    if (!id) return
+
+    const supabase = createClient()
+    const { error } = await supabase.rpc('express_interest', {
+      p_match_id: id,
+      p_decision: 'interested',
+    })
+
+    if (error) {
+      setActionError('Beim Aktualisieren des Matches ist ein Fehler aufgetreten.')
+      setAcceptingId(null)
+      return
+    }
+
+    if (acceptingTab === 'empfehlungen') setRecAcceptedIds(prev => [...prev, id])
+    else setOtherAcceptedIds(prev => [...prev, id])
     setAcceptingId(null)
   }
+
+  async function handleDecline(matchId: string, tab: 'empfehlungen' | 'gegenseite') {
+    setActionError('')
+
+    // Optimistic: remove card immediately
+    if (tab === 'empfehlungen') setRecDeclinedIds(prev => [...prev, matchId])
+    else setOtherDeclinedIds(prev => [...prev, matchId])
+
+    const supabase = createClient()
+    const { error } = await supabase.rpc('express_interest', {
+      p_match_id: matchId,
+      p_decision: 'declined',
+    })
+
+    if (error) {
+      // Revert optimistic update
+      if (tab === 'empfehlungen') setRecDeclinedIds(prev => prev.filter(id => id !== matchId))
+      else setOtherDeclinedIds(prev => prev.filter(id => id !== matchId))
+      setActionError('Beim Aktualisieren des Matches ist ein Fehler aufgetreten.')
+    }
+  }
+
+  // ── Modal apartment lookup ────────────────────────────────────────────────────
+
+  const acceptingApt = acceptingId
+    ? [...empfehlungenApts, ...gegenseiteApts].find(a => a.id === acceptingId) ?? null
+    : null
+
+  // ── Loading state ─────────────────────────────────────────────────────────────
+
+  if (loadingData) {
+    return (
+      <div style={{
+        background: 'rgba(18,14,8,0.55)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 16, padding: '72px 28px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.40)', margin: 0 }}>
+          Matches werden geladen…
+        </p>
+      </div>
+    )
+  }
+
+  // ── Error state ───────────────────────────────────────────────────────────────
+
+  if (loadError) {
+    return (
+      <div style={{
+        background: 'rgba(18,14,8,0.55)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 16, padding: '72px 28px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 14, color: 'rgba(220,80,80,0.80)', margin: 0 }}>
+          {loadError}
+        </p>
+      </div>
+    )
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -432,7 +496,7 @@ export function MatchList() {
         marginBottom: 20,
       }}>
         <div style={{ padding: '24px 28px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <div style={{ marginBottom: 16 }}>
             <h2 style={{
               fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
               fontSize: 22, fontWeight: 400, color: '#f5f5f4',
@@ -440,15 +504,34 @@ export function MatchList() {
             }}>
               Ihre Matches
             </h2>
-            <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.28)' }}>
-              Phase 1 Vorschau — Beispieldaten
-            </span>
           </div>
         </div>
         <div style={{ paddingLeft: 12, paddingRight: 12 }}>
-          <SubTabBar active={activeTab} onChange={setActiveTab} />
+          <SubTabBar
+            active={activeTab}
+            onChange={setActiveTab}
+            counts={{
+              empfehlungen: empfehlungenApts.length,
+              gegenseite: gegenseiteApts.length,
+              beidseitig: beidseitigApts.length,
+            }}
+          />
         </div>
       </div>
+
+      {/* Action error banner */}
+      {actionError && (
+        <div style={{
+          background: 'rgba(220,80,80,0.10)',
+          border: '1px solid rgba(220,80,80,0.25)',
+          borderRadius: 10, padding: '12px 16px',
+          marginBottom: 16,
+        }}>
+          <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>
+            {actionError}
+          </p>
+        </div>
+      )}
 
       {/* Tab content */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -468,11 +551,12 @@ export function MatchList() {
               Diese Vorschläge entstehen automatisch aus den gegenseitigen Wohnungs- und Sucheinstellungen. Homelio priorisiert Wohnungen, bei denen beide Seiten besonders gut zueinander passen.
             </p>
             <CardList
-              apartments={MOCK_RECOMMENDATIONS}
+              apartments={empfehlungenApts}
               acceptedIds={recAcceptedIds}
               declinedIds={recDeclinedIds}
               onAccept={id => openModal(id, 'empfehlungen')}
-              onDecline={id => setRecDeclinedIds(prev => [...prev, id])}
+              onDecline={id => handleDecline(id, 'empfehlungen')}
+              emptyMessage="Noch keine Empfehlungen"
             />
           </>
         )}
@@ -497,14 +581,15 @@ export function MatchList() {
             )}
             {isPremium ? (
               <CardList
-                apartments={MOCK_ACCEPTED_BY_OTHER}
+                apartments={gegenseiteApts}
                 acceptedIds={otherAcceptedIds}
                 declinedIds={otherDeclinedIds}
                 onAccept={id => openModal(id, 'gegenseite')}
-                onDecline={id => setOtherDeclinedIds(prev => [...prev, id])}
+                onDecline={id => handleDecline(id, 'gegenseite')}
+                emptyMessage="Noch keine Annahmen der Gegenseite"
               />
             ) : (
-              <PremiumGate count={MOCK_ACCEPTED_BY_OTHER.length} />
+              <PremiumGate count={gegenseiteApts.length} />
             )}
           </>
         )}
@@ -518,7 +603,7 @@ export function MatchList() {
               onChange={setNotifyBeidseitig}
             />
             <CardList
-              apartments={MOCK_MUTUAL}
+              apartments={beidseitigApts}
               acceptedIds={[]}
               declinedIds={[]}
               onAccept={() => {}}
