@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MatchCard, type MatchApartment } from './MatchCard'
@@ -348,6 +348,12 @@ export function MatchList() {
   const [aptMatchable, setAptMatchable] = useState(false)
   const [prefsReady, setPrefsReady] = useState(false)
 
+  // ── Photo state ──
+  // Keyed by match_id. undefined = not fetched yet; [] = fetched, no photos; [...] = photos.
+  const [matchPhotos, setMatchPhotos] = useState<Record<string, string[]>>({})
+  // Tracks which match IDs have been dispatched for fetching (avoids duplicate requests).
+  const fetchedIds = useRef(new Set<string>())
+
   // ── Data fetching ─────────────────────────────────────────────────────────────
 
   async function loadMatches() {
@@ -397,6 +403,60 @@ export function MatchList() {
     loadMatches()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch photos lazily for the currently visible tab.
+  // Only dispatches requests for match IDs not yet in-flight (tracked by fetchedIds ref).
+  // On error or non-OK response, stores [] so the card shows "no photos" rather than
+  // staying on the loading placeholder indefinitely.
+  useEffect(() => {
+    if (loadingData || !matches.length) return
+
+    // Mirror the same mutually-exclusive filter logic used in tab categorisation below.
+    let visibleIds: string[]
+    switch (activeTab) {
+      case 'empfehlungen':
+        visibleIds = matches
+          .filter(m => m.my_status === 'pending' && m.other_status === 'pending' && !m.is_mutual)
+          .map(m => m.match_id)
+        break
+      case 'gegenseite':
+        visibleIds = matches
+          .filter(m => m.other_status === 'interested' && m.my_status === 'pending' && !m.is_mutual)
+          .map(m => m.match_id)
+        break
+      case 'warten':
+        visibleIds = matches
+          .filter(m => m.my_status === 'interested' && m.other_status === 'pending' && !m.is_mutual)
+          .map(m => m.match_id)
+        break
+      case 'beidseitig':
+        visibleIds = matches.filter(m => m.is_mutual).map(m => m.match_id)
+        break
+      default:
+        return
+    }
+
+    const toFetch = visibleIds.filter(id => !fetchedIds.current.has(id))
+    if (!toFetch.length) return
+
+    // Mark all as in-flight before any async work to prevent duplicate dispatches.
+    toFetch.forEach(id => fetchedIds.current.add(id))
+
+    Promise.all(
+      toFetch.map(async id => {
+        try {
+          const res = await fetch(`/api/matches/${id}/photos`)
+          if (!res.ok) return [id, [] as string[]] as const
+          const json = await res.json() as { urls: string[] }
+          return [id, json.urls] as const
+        } catch {
+          return [id, [] as string[]] as const
+        }
+      })
+    ).then(results => {
+      setMatchPhotos(prev => ({ ...prev, ...Object.fromEntries(results) }))
+    })
+  }, [activeTab, matches, loadingData]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Tab categorisation (mutually exclusive) ───────────────────────────────────
 
   const empfehlungen = matches.filter(m => m.my_status === 'pending'    && m.other_status === 'pending'    && !m.is_mutual)
@@ -404,10 +464,14 @@ export function MatchList() {
   const warten       = matches.filter(m => m.my_status === 'interested'  && m.other_status === 'pending'   && !m.is_mutual)
   const beidseitig   = matches.filter(m => m.is_mutual)
 
-  const empfehlungenApts = empfehlungen.map(toMatchApartment)
-  const gegenseiteApts   = gegenseite.map(toMatchApartment)
-  const wartenApts       = warten.map(toMatchApartment)
-  const beidseitigApts   = beidseitig.map(toMatchApartment)
+  // photoUrls injected from matchPhotos state:
+  //   undefined  → fetch not yet complete (MatchCard shows loading placeholder)
+  //   []         → fetch complete, other user has no photos
+  //   [...]      → fetch complete, photos available
+  const empfehlungenApts = empfehlungen.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
+  const gegenseiteApts   = gegenseite.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
+  const wartenApts       = warten.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
+  const beidseitigApts   = beidseitig.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
 
   // ── Actions ───────────────────────────────────────────────────────────────────
 

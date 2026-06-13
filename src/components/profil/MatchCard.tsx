@@ -20,6 +20,8 @@ export interface MatchApartment {
   estimatedRentNet?: number
   estimatedAdditionalCosts?: number
   estimatedRentGross?: number
+  // undefined = not yet loaded (show placeholder), [] = no photos uploaded, [...] = gallery
+  photoUrls?: string[]
 }
 
 interface MatchCardProps {
@@ -75,13 +77,59 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>
-        <p style={{
-          fontSize: 12, color: 'rgba(245,245,244,0.28)',
-          margin: 0, textAlign: 'center', padding: '0 24px', lineHeight: 1.65,
-        }}>
-          Fotos nach Kontaktaufnahme verfügbar
-        </p>
+        {apartment.photoUrls && apartment.photoUrls.length > 0 ? (
+          /* Horizontally scrollable photo strip — CSS scroll snap, no package */
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            scrollbarWidth: 'none',
+          }}>
+            {apartment.photoUrls.map((url, i) => (
+              <img
+                key={url}
+                src={url}
+                alt={`Foto ${i + 1}`}
+                draggable={false}
+                style={{
+                  flex: '0 0 100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  scrollSnapAlign: 'start',
+                  display: 'block',
+                }}
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+            ))}
+          </div>
+        ) : (
+          <p style={{
+            fontSize: 12, color: 'rgba(245,245,244,0.28)',
+            margin: 0, textAlign: 'center', padding: '0 24px', lineHeight: 1.65,
+          }}>
+            {apartment.photoUrls === undefined
+              ? 'Fotos werden geladen…'
+              : 'Noch keine Fotos hochgeladen'}
+          </p>
+        )}
         <ScoreBadge score={apartment.matchScore} />
+        {/* Photo count badge — visible when multiple photos are available */}
+        {apartment.photoUrls && apartment.photoUrls.length > 1 && (
+          <div style={{
+            position: 'absolute', bottom: 12, left: 12,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(6px)',
+            borderRadius: 999,
+            padding: '3px 10px',
+            fontSize: 11, fontWeight: 500,
+            color: 'rgba(245,245,244,0.85)',
+            pointerEvents: 'none',
+          }}>
+            {apartment.photoUrls.length} Fotos
+          </div>
+        )}
       </div>
 
       {/* Content */}
