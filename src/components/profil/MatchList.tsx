@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { MatchCard, type MatchApartment } from './MatchCard'
 import { AcceptModal } from './AcceptModal'
 import { createClient } from '@/lib/supabase/client'
@@ -344,6 +345,8 @@ export function MatchList() {
   const [notifyBeidseitig, setNotifyBeidseitig] = useState(true)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
   const [acceptingAptTitle, setAcceptingAptTitle] = useState<string | null>(null)
+  const [aptMatchable, setAptMatchable] = useState(false)
+  const [prefsReady, setPrefsReady] = useState(false)
 
   // ── Data fetching ─────────────────────────────────────────────────────────────
 
@@ -356,21 +359,28 @@ export function MatchList() {
       return
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', user.id)
-      .single()
-    setIsPremium(profile?.is_premium ?? false)
+    const [profileResult, matchResult, aptResult, prefsResult] = await Promise.all([
+      supabase.from('profiles').select('is_premium').eq('id', user.id).single(),
+      supabase.rpc('get_my_match_cards'),
+      supabase.from('apartments').select('city, rooms, rent_gross, status').eq('user_id', user.id).single(),
+      supabase.from('search_preferences').select('city_region, max_rent_gross').eq('user_id', user.id).single(),
+    ])
 
-    const { data, error } = await supabase.rpc('get_my_match_cards')
-    if (error) {
+    setIsPremium(profileResult.data?.is_premium ?? false)
+
+    const apt = aptResult.data
+    setAptMatchable(!!apt && !!apt.city && apt.rooms != null && apt.rent_gross != null && apt.status === 'active')
+
+    const prefs = prefsResult.data
+    setPrefsReady(!!prefs && prefs.city_region != null && prefs.max_rent_gross != null)
+
+    if (matchResult.error) {
       setLoadError('Beim Laden der Matches ist ein Fehler aufgetreten.')
       setLoadingData(false)
       return
     }
 
-    setMatches((data as MatchCardRow[]) ?? [])
+    setMatches((matchResult.data as MatchCardRow[]) ?? [])
     setLoadingData(false)
   }
 
@@ -553,12 +563,50 @@ export function MatchList() {
             }}>
               Diese Vorschläge entstehen automatisch aus den gegenseitigen Wohnungs- und Sucheinstellungen. Homelio priorisiert Wohnungen, bei denen beide Seiten besonders gut zueinander passen.
             </p>
-            <CardList
-              apartments={empfehlungenApts}
-              onAccept={openModal}
-              onDecline={handleDecline}
-              emptyMessage="Noch keine Empfehlungen"
-            />
+            {empfehlungenApts.length === 0 && (!aptMatchable || !prefsReady) ? (
+              <div style={{
+                background: 'rgba(18,14,8,0.55)',
+                border: '1px solid rgba(212,168,83,0.14)',
+                borderRadius: 16, padding: '48px 28px', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 999,
+                  background: 'rgba(212,168,83,0.10)',
+                  border: '1px solid rgba(212,168,83,0.22)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, color: '#d4a853',
+                }}>◎</div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 500, color: '#f5f5f4', margin: '0 0 8px', fontFamily: 'var(--font-instrument-serif, Georgia, serif)' }}>
+                    Profil noch nicht bereit für Matching
+                  </p>
+                  <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.40)', margin: 0, lineHeight: 1.7 }}>
+                    {!aptMatchable
+                      ? 'Vervollständigen Sie Ihre Wohnungsangaben, damit Homelio passende Matches suchen kann.'
+                      : 'Ergänzen Sie Ihre Sucheinstellungen, damit Homelio passende Matches suchen kann.'}
+                  </p>
+                </div>
+                <Link
+                  href={!aptMatchable ? '/profil/meine-wohnung' : '/profil/sucheinstellungen'}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 999, background: '#d4a853', color: '#0C0A06',
+                    padding: '11px 24px', fontSize: 13, fontWeight: 500,
+                    textDecoration: 'none', letterSpacing: '0.02em',
+                  }}
+                >
+                  {!aptMatchable ? 'Wohnung vervollständigen' : 'Sucheinstellungen ergänzen'}
+                </Link>
+              </div>
+            ) : (
+              <CardList
+                apartments={empfehlungenApts}
+                onAccept={openModal}
+                onDecline={handleDecline}
+                emptyMessage="Noch keine passenden Empfehlungen gefunden."
+              />
+            )}
           </>
         )}
 
