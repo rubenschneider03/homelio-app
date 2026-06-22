@@ -73,6 +73,13 @@ export async function GET(
     : match.apartment_a_id
 
   // 7. Fetch photo rows for the other apartment using the service role client.
+  console.error('[match photos] lookup context', {
+    hasServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    serviceKeyStartsWithEyJ: process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('eyJ') ?? false,
+    matchId,
+    otherApartmentId,
+  })
+
   const { data: rowsRaw, error: photoErr } = await serviceClient
     .from('apartment_photos')
     .select('storage_path, position')
@@ -80,6 +87,12 @@ export async function GET(
     .order('position', { ascending: true })
 
   if (photoErr) {
+    console.error('[match photos] apartment_photos query failed', {
+      code: photoErr.code,
+      message: photoErr.message,
+      details: photoErr.details,
+      hint: photoErr.hint,
+    })
     return NextResponse.json({ error: 'Photo lookup failed.' }, { status: 500 })
   }
 
