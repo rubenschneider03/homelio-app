@@ -1,5 +1,7 @@
 'use client'
 
+import { computeRentEstimate } from '@/lib/rent-estimate'
+
 export interface MatchApartment {
   id: string
   title: string
@@ -17,9 +19,12 @@ export interface MatchApartment {
   transport: string
   matchReasons: string[]
   description: string
-  estimatedRentNet?: number
-  estimatedAdditionalCosts?: number
-  estimatedRentGross?: number
+  city?: string | null
+  district?: string | null
+  hasBalcony?: boolean
+  hasElevator?: string | null
+  parkingType?: string | null
+  laundry?: string | null
   // undefined = not yet loaded (show placeholder), [] = no photos uploaded, [...] = gallery
   photoUrls?: string[]
 }
@@ -53,12 +58,23 @@ function ScoreBadge({ score }: { score: number }) {
 
 export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }: MatchCardProps) {
   const fmtCHF = (n: number) => `CHF ${n.toLocaleString('de-CH')}`
+  const fmtRange = (lo: number, hi: number) =>
+    `CHF ${lo.toLocaleString('de-CH')}–${hi.toLocaleString('de-CH')}`
 
-  const rentRows = [
-    { left: 'Nettomiete', leftVal: fmtCHF(apartment.rentNet), right: 'Gesch. Nettomiete', rightVal: apartment.estimatedRentNet, bold: false },
-    { left: 'Nebenkosten', leftVal: fmtCHF(apartment.additionalCosts), right: 'Gesch. Nebenkosten', rightVal: apartment.estimatedAdditionalCosts, bold: false },
-    { left: 'Bruttomiete', leftVal: fmtCHF(apartment.rentGross), right: 'Gesch. Bruttomiete', rightVal: apartment.estimatedRentGross, bold: true },
-  ]
+  const estimate = computeRentEstimate({
+    city: apartment.city,
+    district: apartment.district,
+    rooms: apartment.rooms || null,
+    area_sqm: apartment.area || null,
+    rent_net: apartment.rentNet || null,
+    additional_costs: apartment.additionalCosts || null,
+    rent_gross: apartment.rentGross || null,
+    floor: apartment.floor || null,
+    has_balcony: apartment.hasBalcony,
+    has_elevator: apartment.hasElevator,
+    parking_type: apartment.parkingType,
+    laundry: apartment.laundry,
+  })
 
   return (
     <div style={{
@@ -209,37 +225,100 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
               </div>
               <div style={{ padding: '9px 14px' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'rgba(212,168,83,0.65)' }}>
-                  Homelio-Vermutung
+                  Homelio-Mietzinsvermutung
                 </span>
               </div>
             </div>
 
-            {/* Data rows */}
-            {rentRows.map((row, i) => (
-              <div key={row.left} style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr',
-                borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                background: row.bold ? 'rgba(212,168,83,0.03)' : 'transparent',
-              }}>
-                <div style={{ padding: '9px 14px', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 11, color: 'rgba(245,245,244,0.38)' }}>{row.left}</span>
-                  <span style={{ fontSize: 13, fontWeight: row.bold ? 600 : 400, color: row.bold ? '#f5f5f4' : 'rgba(245,245,244,0.75)' }}>
-                    {row.leftVal}
-                  </span>
-                </div>
-                <div style={{ padding: '9px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 11, color: 'rgba(212,168,83,0.55)' }}>{row.right}</span>
-                  <span style={{ fontSize: 13, fontWeight: row.bold ? 600 : 400, color: row.bold ? 'rgba(212,168,83,0.95)' : 'rgba(212,168,83,0.80)' }}>
-                    {row.rightVal != null ? `≈ ${fmtCHF(row.rightVal)}` : 'Keine Einschätzung verfügbar'}
-                  </span>
-                </div>
+            {/* Body: current rent rows | estimate block */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              {/* Left: current rent */}
+              <div style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+                {([
+                  { label: 'Nettomiete', val: fmtCHF(apartment.rentNet), bold: false },
+                  { label: 'Nebenkosten', val: fmtCHF(apartment.additionalCosts), bold: false },
+                  { label: 'Bruttomiete', val: fmtCHF(apartment.rentGross), bold: true },
+                ] as const).map((row, i) => (
+                  <div key={row.label} style={{
+                    padding: '9px 14px',
+                    borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                    background: row.bold ? 'rgba(212,168,83,0.03)' : 'transparent',
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}>
+                    <span style={{ fontSize: 11, color: 'rgba(245,245,244,0.38)' }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: row.bold ? 600 : 400, color: row.bold ? '#f5f5f4' : 'rgba(245,245,244,0.75)' }}>
+                      {row.val}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* Right: Homelio estimate */}
+              <div style={{
+                padding: '12px 14px',
+                display: 'flex', flexDirection: 'column', gap: 6,
+                background: 'rgba(212,168,83,0.02)',
+              }}>
+                {estimate.available ? (
+                  <>
+                    <span style={{ fontSize: 10, color: 'rgba(212,168,83,0.55)', letterSpacing: '0.04em', lineHeight: 1.4 }}>
+                      Realistische Neuvermietungsrange
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'rgba(212,168,83,0.95)', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                      {fmtRange(estimate.grossLow!, estimate.grossHigh!)}
+                    </span>
+                    <span style={{ fontSize: 10, color: 'rgba(212,168,83,0.55)', marginTop: -3 }}>
+                      brutto / Monat
+                    </span>
+                    {estimate.netLow != null && estimate.netHigh != null && (
+                      <span style={{ fontSize: 11, color: 'rgba(245,245,244,0.45)' }}>
+                        {fmtRange(estimate.netLow, estimate.netHigh)} netto
+                      </span>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                      <span style={{
+                        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                        background: estimate.confidence === 'Hoch'
+                          ? 'rgba(80,200,100,0.80)'
+                          : estimate.confidence === 'Mittel'
+                          ? 'rgba(212,168,83,0.80)'
+                          : 'rgba(245,245,244,0.35)',
+                      }} />
+                      <span style={{ fontSize: 10, color: 'rgba(245,245,244,0.38)' }}>
+                        Konfidenz: {estimate.confidence}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, color: 'rgba(245,245,244,0.28)', lineHeight: 1.4 }}>
+                      {estimate.referenceRateText}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'rgba(245,245,244,0.45)', lineHeight: 1.5 }}>
+                      {estimate.comparison}
+                    </span>
+                    {estimate.marketConflictNote && (
+                      <span style={{ fontSize: 10, color: 'rgba(212,168,83,0.60)', lineHeight: 1.4 }}>
+                        {estimate.marketConflictNote}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 10, color: 'rgba(212,168,83,0.55)', letterSpacing: '0.04em', lineHeight: 1.4 }}>
+                      Realistische Neuvermietungsrange
+                    </span>
+                    <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.32)', lineHeight: 1.55 }}>
+                      {estimate.missingFields && estimate.missingFields.length > 0
+                        ? `Für eine Einschätzung fehlen: ${estimate.missingFields.join(', ')}.`
+                        : 'Keine Einschätzung verfügbar.'}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Disclaimer */}
           <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '8px 0 0', lineHeight: 1.6, fontStyle: 'italic' }}>
-            Unverbindliche Einschätzung. Auf Basis der verfügbaren Angaben. Kann von der tatsächlichen Miete abweichen.
+            Unverbindliche Einschätzung auf Basis der verfügbaren Angaben.
           </p>
         </div>
 
