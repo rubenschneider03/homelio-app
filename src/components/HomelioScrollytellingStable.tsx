@@ -906,13 +906,21 @@ export default function HomelioScrollytellingStable() {
 
   useEffect(() => {
     let startY = 0;
-    const onTouchStart = (e: TouchEvent) => { startY = e.touches[0].clientY; };
-    const onTouchEnd   = (e: TouchEvent) => {
+    let singleTouchStarted = false;
+    // Ignore multi-touch (pinch zoom) — only track single-finger swipes.
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) { singleTouchStarted = false; return; }
+      singleTouchStarted = true;
+      startY = e.touches[0].clientY;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!singleTouchStarted) return;
+      singleTouchStarted = false;
       const dy = startY - e.changedTouches[0].clientY;
       if (Math.abs(dy) >= 40) handleIntent(dy);
     };
     window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend',   onTouchEnd,   { passive: false });
+    window.addEventListener('touchend',   onTouchEnd,   { passive: true });
     return () => {
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend',   onTouchEnd);
@@ -983,7 +991,7 @@ export default function HomelioScrollytellingStable() {
   return (
     <div
       ref={containerRef}
-      style={{ position: 'relative', width: '100%', height: '100svh', overflow: 'hidden', background: '#050505' }}
+      style={{ position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden', background: '#050505' }}
     >
       {/* ── Layer 1: fullscreen video — always present, always covering ── */}
       <video

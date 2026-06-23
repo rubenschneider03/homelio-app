@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MatchCard, type MatchApartment } from './MatchCard'
 import { AcceptModal } from './AcceptModal'
+import { ApplicationPanel } from './ApplicationPanel'
+import { PremiumComingSoonModal } from '@/components/ui/PremiumComingSoonModal'
 import { createClient } from '@/lib/supabase/client'
 
 // ── RPC row shape returned by get_my_match_cards() ────────────────────────────
@@ -99,7 +101,7 @@ function toMatchApartment(row: MatchCardRow): MatchApartment {
 
 type SubTab = 'empfehlungen' | 'gegenseite' | 'warten' | 'beidseitig'
 
-// ── Sub-tab bar ───────────────────────────────────────────────────────────────
+// ── Sub-tab bar — 3 visible tabs only (warten omitted from UI) ───────────────
 
 function SubTabBar({
   active,
@@ -108,13 +110,12 @@ function SubTabBar({
 }: {
   active: SubTab
   onChange: (t: SubTab) => void
-  counts: { empfehlungen: number; gegenseite: number; warten: number; beidseitig: number }
+  counts: { empfehlungen: number; gegenseite: number; beidseitig: number }
 }) {
   const tabs: { id: SubTab; label: string; count: number }[] = [
-    { id: 'empfehlungen', label: 'Homelio Empfehlungen', count: counts.empfehlungen },
-    { id: 'gegenseite',   label: 'Von Gegenseite angenommen', count: counts.gegenseite },
-    { id: 'warten',       label: 'Wartet auf Gegenseite', count: counts.warten },
-    { id: 'beidseitig',   label: 'Beidseitige Matches', count: counts.beidseitig },
+    { id: 'empfehlungen', label: 'Empfehlungen', count: counts.empfehlungen },
+    { id: 'gegenseite',   label: 'Von Gegenseite', count: counts.gegenseite },
+    { id: 'beidseitig',  label: 'Beidseitig', count: counts.beidseitig },
   ]
 
   return (
@@ -122,7 +123,6 @@ function SubTabBar({
       display: 'flex',
       borderBottom: '1px solid rgba(255,255,255,0.08)',
       gap: 0,
-      overflowX: 'auto',
     }}>
       {tabs.map(tab => {
         const isActive = active === tab.id
@@ -131,8 +131,9 @@ function SubTabBar({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             style={{
+              flex: 1,
               background: 'none', border: 'none',
-              padding: '13px 16px',
+              padding: '12px 8px',
               cursor: 'pointer',
               fontFamily: 'inherit',
               fontSize: 13,
@@ -140,14 +141,15 @@ function SubTabBar({
               color: isActive ? '#f5f5f4' : 'rgba(245,245,244,0.38)',
               borderBottom: isActive ? '2px solid #d4a853' : '2px solid transparent',
               marginBottom: -1,
-              display: 'flex', alignItems: 'center', gap: 7,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               whiteSpace: 'nowrap',
               transition: 'color 0.15s',
+              minWidth: 0,
             }}
           >
-            {tab.label}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.label}</span>
             <span style={{
-              fontSize: 11, fontWeight: 600,
+              fontSize: 11, fontWeight: 600, flexShrink: 0,
               background: isActive ? 'rgba(212,168,83,0.18)' : 'rgba(255,255,255,0.07)',
               color: isActive ? '#d4a853' : 'rgba(245,245,244,0.35)',
               borderRadius: 999, padding: '2px 7px',
@@ -196,7 +198,6 @@ function NotificationToggle({
           {label}
         </span>
 
-        {/* Pill toggle */}
         <div
           onClick={() => !locked && onChange(!checked)}
           role="switch"
@@ -236,7 +237,7 @@ function NotificationToggle({
 
 // ── Premium gate ──────────────────────────────────────────────────────────────
 
-function PremiumGate({ count }: { count: number }) {
+function PremiumGate({ count, onActivate }: { count: number; onActivate: () => void }) {
   return (
     <div style={{
       background: 'rgba(18,14,8,0.55)',
@@ -265,13 +266,17 @@ function PremiumGate({ count }: { count: number }) {
       <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.48)', margin: 0, lineHeight: 1.7, maxWidth: 400 }}>
         Mit Homelio Premium sehen Sie Wohnungen, bei denen die Gegenseite bereits Interesse signalisiert hat.
       </p>
-      <button style={{
-        background: '#d4a853', color: '#0C0A06', border: 'none',
-        borderRadius: 999, padding: '13px 28px',
-        fontSize: 14, fontWeight: 500, cursor: 'pointer',
-        fontFamily: 'inherit', letterSpacing: '0.02em',
-        marginTop: 4,
-      }}>
+      <button
+        type="button"
+        onClick={onActivate}
+        style={{
+          background: '#d4a853', color: '#0C0A06', border: 'none',
+          borderRadius: 999, padding: '13px 28px',
+          fontSize: 14, fontWeight: 500, cursor: 'pointer',
+          fontFamily: 'inherit', letterSpacing: '0.02em',
+          marginTop: 4,
+        }}
+      >
         Premium aktivieren — CHF 9.95 / Monat
       </button>
       <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.25)', margin: 0 }}>
@@ -347,12 +352,24 @@ export function MatchList() {
   const [acceptingAptTitle, setAcceptingAptTitle] = useState<string | null>(null)
   const [aptMatchable, setAptMatchable] = useState(false)
   const [prefsReady, setPrefsReady] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   // ── Photo state ──
-  // Keyed by match_id. undefined = not fetched yet; [] = fetched, no photos; [...] = photos.
   const [matchPhotos, setMatchPhotos] = useState<Record<string, string[]>>({})
-  // Tracks which match IDs have been dispatched for fetching (avoids duplicate requests).
   const fetchedIds = useRef(new Set<string>())
+
+  // ── Persist a single notification toggle to search_preferences ───────────────
+  async function saveNotifyPref(
+    key: 'notify_recommendations' | 'notify_gegenseite' | 'notify_mutual',
+    val: boolean
+  ) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from('search_preferences')
+      .upsert({ user_id: user.id, [key]: val }, { onConflict: 'user_id' })
+  }
 
   // ── Data fetching ─────────────────────────────────────────────────────────────
 
@@ -369,7 +386,11 @@ export function MatchList() {
       supabase.from('profiles').select('is_premium').eq('id', user.id).single(),
       supabase.rpc('get_my_match_cards'),
       supabase.from('apartments').select('city, rooms, rent_gross, status').eq('user_id', user.id).single(),
-      supabase.from('search_preferences').select('city_region, max_rent_gross').eq('user_id', user.id).single(),
+      supabase
+        .from('search_preferences')
+        .select('city_region, max_rent_gross, notify_recommendations, notify_gegenseite, notify_mutual')
+        .eq('user_id', user.id)
+        .single(),
     ])
 
     setIsPremium(profileResult.data?.is_premium ?? false)
@@ -379,6 +400,13 @@ export function MatchList() {
 
     const prefs = prefsResult.data
     setPrefsReady(!!prefs && prefs.city_region != null && prefs.max_rent_gross != null)
+
+    // Load persisted notification preferences
+    if (prefs) {
+      setNotifyRec(prefs.notify_recommendations ?? true)
+      setNotifyGegenseite(prefs.notify_gegenseite ?? true)
+      setNotifyBeidseitig(prefs.notify_mutual ?? true)
+    }
 
     if (matchResult.error) {
       setLoadError('Beim Laden der Matches ist ein Fehler aufgetreten.')
@@ -390,7 +418,6 @@ export function MatchList() {
     setLoadingData(false)
   }
 
-  // Lightweight refresh after actions — does not touch loadingData or loadError.
   async function refreshMatches() {
     const supabase = createClient()
     const { data, error } = await supabase.rpc('get_my_match_cards')
@@ -404,13 +431,9 @@ export function MatchList() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch photos lazily for the currently visible tab.
-  // Only dispatches requests for match IDs not yet in-flight (tracked by fetchedIds ref).
-  // On error or non-OK response, stores [] so the card shows "no photos" rather than
-  // staying on the loading placeholder indefinitely.
   useEffect(() => {
     if (loadingData || !matches.length) return
 
-    // Mirror the same mutually-exclusive filter logic used in tab categorisation below.
     let visibleIds: string[]
     switch (activeTab) {
       case 'empfehlungen':
@@ -438,7 +461,6 @@ export function MatchList() {
     const toFetch = visibleIds.filter(id => !fetchedIds.current.has(id))
     if (!toFetch.length) return
 
-    // Mark all as in-flight before any async work to prevent duplicate dispatches.
     toFetch.forEach(id => fetchedIds.current.add(id))
 
     Promise.all(
@@ -457,17 +479,13 @@ export function MatchList() {
     })
   }, [activeTab, matches, loadingData]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Tab categorisation (mutually exclusive) ───────────────────────────────────
+  // ── Tab categorisation ────────────────────────────────────────────────────────
 
   const empfehlungen = matches.filter(m => m.my_status === 'pending'    && m.other_status === 'pending'    && !m.is_mutual)
   const gegenseite   = matches.filter(m => m.other_status === 'interested' && m.my_status === 'pending'    && !m.is_mutual)
   const warten       = matches.filter(m => m.my_status === 'interested'  && m.other_status === 'pending'   && !m.is_mutual)
   const beidseitig   = matches.filter(m => m.is_mutual)
 
-  // photoUrls injected from matchPhotos state:
-  //   undefined  → fetch not yet complete (MatchCard shows loading placeholder)
-  //   []         → fetch complete, other user has no photos
-  //   [...]      → fetch complete, photos available
   const empfehlungenApts = empfehlungen.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
   const gegenseiteApts   = gegenseite.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
   const wartenApts       = warten.map(m => ({ ...toMatchApartment(m), photoUrls: matchPhotos[m.match_id] }))
@@ -502,8 +520,6 @@ export function MatchList() {
       return
     }
 
-    // Reload matches while AcceptModal shows its success state.
-    // Modal stays visible until the user clicks "Schliessen" → onClose fires.
     await refreshMatches()
   }
 
@@ -543,8 +559,6 @@ export function MatchList() {
     )
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────────
-
   if (loadError) {
     return (
       <div style={{
@@ -558,6 +572,8 @@ export function MatchList() {
       </div>
     )
   }
+
+  const hasAnyMatch = matches.length > 0
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -589,7 +605,6 @@ export function MatchList() {
             counts={{
               empfehlungen: empfehlungenApts.length,
               gegenseite:   gegenseiteApts.length,
-              warten:       wartenApts.length,
               beidseitig:   beidseitigApts.length,
             }}
           />
@@ -619,14 +634,30 @@ export function MatchList() {
             <NotificationToggle
               label="Benachrichtigung für neue Homelio Empfehlungen"
               checked={notifyRec}
-              onChange={setNotifyRec}
+              onChange={v => { setNotifyRec(v); saveNotifyPref('notify_recommendations', v) }}
             />
+            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
+              Benachrichtigungen per E-Mail befinden sich in Entwicklung.
+            </p>
             <p style={{
               fontSize: 14, color: 'rgba(245,245,244,0.45)', lineHeight: 1.72,
               margin: 0, padding: '0 4px',
             }}>
               Diese Vorschläge entstehen automatisch aus den gegenseitigen Wohnungs- und Sucheinstellungen. Homelio priorisiert Wohnungen, bei denen beide Seiten besonders gut zueinander passen.
             </p>
+
+            {/* Passive note for warten matches */}
+            {wartenApts.length > 0 && (
+              <div style={{
+                background: 'rgba(212,168,83,0.04)',
+                border: '1px solid rgba(212,168,83,0.14)',
+                borderRadius: 10, padding: '12px 16px',
+                fontSize: 13, color: 'rgba(245,245,244,0.42)', lineHeight: 1.6,
+              }}>
+                Sie warten bei {wartenApts.length} Wohnung{wartenApts.length > 1 ? 'en' : ''} auf die Gegenseite.
+              </div>
+            )}
+
             {empfehlungenApts.length === 0 && (!aptMatchable || !prefsReady) ? (
               <div style={{
                 background: 'rgba(18,14,8,0.55)',
@@ -681,7 +712,7 @@ export function MatchList() {
               <NotificationToggle
                 label="Benachrichtigung, wenn die Gegenseite Interesse signalisiert"
                 checked={notifyGegenseite}
-                onChange={setNotifyGegenseite}
+                onChange={v => { setNotifyGegenseite(v); saveNotifyPref('notify_gegenseite', v) }}
               />
             ) : (
               <NotificationToggle
@@ -700,26 +731,8 @@ export function MatchList() {
                 emptyMessage="Noch keine Annahmen der Gegenseite"
               />
             ) : (
-              <PremiumGate count={gegenseiteApts.length} />
+              <PremiumGate count={gegenseiteApts.length} onActivate={() => setShowPremiumModal(true)} />
             )}
-          </>
-        )}
-
-        {/* ── Wartet auf Gegenseite ── */}
-        {activeTab === 'warten' && (
-          <>
-            <p style={{
-              fontSize: 14, color: 'rgba(245,245,244,0.45)', lineHeight: 1.72,
-              margin: 0, padding: '0 4px',
-            }}>
-              Sie haben bei diesen Wohnungen Interesse signalisiert. Homelio benachrichtigt Sie, sobald die andere Seite ebenfalls Interesse bestätigt und ein beidseitiger Match entsteht.
-            </p>
-            <CardList
-              apartments={wartenApts}
-              onDecline={handleDecline}
-              variant="waiting"
-              emptyMessage="Keine ausstehenden Annahmen"
-            />
           </>
         )}
 
@@ -729,8 +742,11 @@ export function MatchList() {
             <NotificationToggle
               label="Benachrichtigung bei neuen beidseitigen Matches"
               checked={notifyBeidseitig}
-              onChange={setNotifyBeidseitig}
+              onChange={v => { setNotifyBeidseitig(v); saveNotifyPref('notify_mutual', v) }}
             />
+            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
+              Benachrichtigungen per E-Mail befinden sich in Entwicklung.
+            </p>
             <CardList
               apartments={beidseitigApts}
               variant="mutual"
@@ -741,7 +757,14 @@ export function MatchList() {
 
       </div>
 
-      {/* Accept modal — stays mounted while acceptingId/Title are set, even after refreshMatches() */}
+      {/* Application panel — shown when user has any match */}
+      {hasAnyMatch && (
+        <div style={{ marginTop: 32 }}>
+          <ApplicationPanel />
+        </div>
+      )}
+
+      {/* Accept modal */}
       {acceptingId && acceptingAptTitle && (
         <AcceptModal
           apartmentTitle={acceptingAptTitle}
@@ -749,6 +772,8 @@ export function MatchList() {
           onConfirmed={handleConfirmed}
         />
       )}
+
+      <PremiumComingSoonModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </>
   )
 }

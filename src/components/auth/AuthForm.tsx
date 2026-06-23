@@ -26,6 +26,7 @@ export function AuthForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [agbAccepted, setAgbAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -40,6 +41,7 @@ export function AuthForm() {
     if (!email) { setError('Bitte geben Sie Ihre E-Mail-Adresse ein.'); return }
     if (password.length < 8) { setError('Passwort muss mindestens 8 Zeichen lang sein.'); return }
     if (password !== confirm) { setError('Passwörter stimmen nicht überein.'); return }
+    if (!agbAccepted) { setError('Bitte akzeptieren Sie die AGB und Datenschutzerklärung.'); return }
     setError('')
     setLoading(true)
     const supabase = createClient()
@@ -139,18 +141,32 @@ export function AuthForm() {
             required
           />
 
+          {/* AGB consent — required to create account */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 4 }}>
+            <input
+              type="checkbox"
+              id="agb-accept"
+              checked={agbAccepted}
+              onChange={e => setAgbAccepted(e.target.checked)}
+              style={{ marginTop: 2, flexShrink: 0, accentColor: '#d4a853', width: 15, height: 15, cursor: 'pointer' }}
+            />
+            <label
+              htmlFor="agb-accept"
+              style={{ fontSize: 12, color: 'rgba(245,245,244,0.55)', lineHeight: 1.60, cursor: 'pointer' }}
+            >
+              Ich akzeptiere die{' '}
+              <a href="/agb" target="_blank" rel="noopener" style={{ color: '#d4a853', textDecoration: 'none' }}>AGB</a>
+              {' '}und{' '}
+              <a href="/datenschutz" target="_blank" rel="noopener" style={{ color: '#d4a853', textDecoration: 'none' }}>Datenschutzerklärung</a>
+              {' '}und bin einverstanden, dass Homelio meine Wohnungsbilder sowie anonymisierte Wohnungs- und Suchdaten im Rahmen des Matching-Prozesses an Verwaltungen weitergeben darf.
+            </label>
+          </div>
+
           {error && (
             <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>{error}</p>
           )}
 
-          <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.32)', margin: '4px 0 0', lineHeight: 1.7 }}>
-            Mit der Registrierung akzeptieren Sie unsere{' '}
-            <a href="/agb" style={{ color: '#d4a853', textDecoration: 'none' }}>AGB</a>
-            {' '}und unsere{' '}
-            <a href="/datenschutz" style={{ color: '#d4a853', textDecoration: 'none' }}>Datenschutzerklärung</a>.
-          </p>
-
-          <Button type="submit" fullWidth disabled={loading} style={{ marginTop: 4 }}>
+          <Button type="submit" fullWidth disabled={loading || !agbAccepted} style={{ marginTop: 4 }}>
             {loading ? 'Konto wird erstellt...' : 'Konto erstellen →'}
           </Button>
         </form>
