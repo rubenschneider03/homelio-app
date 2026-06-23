@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MatchCard, type MatchApartment } from './MatchCard'
 import { AcceptModal } from './AcceptModal'
-import { ApplicationPanel } from './ApplicationPanel'
 import { PremiumComingSoonModal } from '@/components/ui/PremiumComingSoonModal'
 import { createClient } from '@/lib/supabase/client'
 
@@ -115,7 +114,7 @@ function SubTabBar({
   const tabs: { id: SubTab; label: string; count: number }[] = [
     { id: 'empfehlungen', label: 'Empfehlungen', count: counts.empfehlungen },
     { id: 'gegenseite',   label: 'Von Gegenseite', count: counts.gegenseite },
-    { id: 'beidseitig',  label: 'Beidseitig', count: counts.beidseitig },
+    { id: 'beidseitig',   label: 'Matches', count: counts.beidseitig },
   ]
 
   return (
@@ -573,8 +572,6 @@ export function MatchList() {
     )
   }
 
-  const hasAnyMatch = matches.length > 0
-
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -632,12 +629,12 @@ export function MatchList() {
         {activeTab === 'empfehlungen' && (
           <>
             <NotificationToggle
-              label="Benachrichtigung für neue Homelio Empfehlungen"
+              label="E-Mail-Benachrichtigungen vormerken"
               checked={notifyRec}
               onChange={v => { setNotifyRec(v); saveNotifyPref('notify_recommendations', v) }}
             />
             <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
-              Benachrichtigungen per E-Mail befinden sich in Entwicklung.
+              E-Mail-Benachrichtigungen folgen bald.
             </p>
             <p style={{
               fontSize: 14, color: 'rgba(245,245,244,0.45)', lineHeight: 1.72,
@@ -710,17 +707,17 @@ export function MatchList() {
           <>
             {isPremium ? (
               <NotificationToggle
-                label="Benachrichtigung, wenn die Gegenseite Interesse signalisiert"
+                label="E-Mail-Benachrichtigungen vormerken"
                 checked={notifyGegenseite}
                 onChange={v => { setNotifyGegenseite(v); saveNotifyPref('notify_gegenseite', v) }}
               />
             ) : (
               <NotificationToggle
-                label="Benachrichtigung, wenn die Gegenseite Interesse signalisiert"
+                label="E-Mail-Benachrichtigungen vormerken"
                 checked={false}
                 onChange={() => {}}
                 locked
-                lockedNote="Benachrichtigungen für bereits angenommene Wohnungen sind mit Homelio Premium verfügbar."
+                lockedNote="E-Mail-Benachrichtigungen für diese Kategorie sind mit Homelio Premium verfügbar."
               />
             )}
             {isPremium ? (
@@ -736,33 +733,53 @@ export function MatchList() {
           </>
         )}
 
-        {/* ── Beidseitige Matches ── */}
+        {/* ── Matches (beidseitig) ── */}
         {activeTab === 'beidseitig' && (
           <>
             <NotificationToggle
-              label="Benachrichtigung bei neuen beidseitigen Matches"
+              label="E-Mail-Benachrichtigungen vormerken"
               checked={notifyBeidseitig}
               onChange={v => { setNotifyBeidseitig(v); saveNotifyPref('notify_mutual', v) }}
             />
             <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
-              Benachrichtigungen per E-Mail befinden sich in Entwicklung.
+              E-Mail-Benachrichtigungen folgen bald.
             </p>
+
+            {/* Dossier CTA — only when user has at least one mutual match */}
+            {beidseitigApts.length > 0 && (
+              <div style={{
+                background: 'rgba(212,168,83,0.05)',
+                border: '1px solid rgba(212,168,83,0.20)',
+                borderRadius: 12,
+                padding: '18px 20px',
+                display: 'flex', flexDirection: 'column', gap: 12,
+              }}>
+                <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.72)', margin: 0, lineHeight: 1.68 }}>
+                  Sie haben ein Match. Ergänzen Sie Ihr Bewerbungsdossier, damit Homelio Ihre Anfrage später strukturiert an Verwaltungen weiterleiten kann.
+                </p>
+                <Link
+                  href="/profil/bewerbung"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    borderRadius: 999, background: '#d4a853', color: '#0C0A06',
+                    padding: '10px 20px', fontSize: 13, fontWeight: 500,
+                    textDecoration: 'none', letterSpacing: '0.02em', alignSelf: 'flex-start',
+                  }}
+                >
+                  Bewerbungsdossier ergänzen →
+                </Link>
+              </div>
+            )}
+
             <CardList
               apartments={beidseitigApts}
               variant="mutual"
-              emptyMessage="Noch keine beidseitigen Matches"
+              emptyMessage="Noch keine Matches"
             />
           </>
         )}
 
       </div>
-
-      {/* Application panel — shown when user has any match */}
-      {hasAnyMatch && (
-        <div style={{ marginTop: 32 }}>
-          <ApplicationPanel />
-        </div>
-      )}
 
       {/* Accept modal */}
       {acceptingId && acceptingAptTitle && (
