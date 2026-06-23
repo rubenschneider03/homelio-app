@@ -212,13 +212,13 @@ export function ApplicationPanel() {
           <div>
             <label style={labelStyle}>Haushaltsgrösse</label>
             <select
-              style={{ ...inputStyle, cursor: 'pointer' }}
+              style={{ ...inputStyle, cursor: 'pointer', background: '#1c1c1c', colorScheme: 'dark' }}
               value={data.household_size}
               onChange={e => upd('household_size', e.target.value)}
             >
-              <option value="">Bitte wählen</option>
+              <option value="" style={{ background: '#1c1c1c', color: 'rgba(245,245,244,0.55)' }}>Bitte wählen</option>
               {HOUSEHOLD.map(h => (
-                <option key={h.value} value={h.value}>{h.label}</option>
+                <option key={h.value} value={h.value} style={{ background: '#1c1c1c', color: '#f5f5f4' }}>{h.label}</option>
               ))}
             </select>
           </div>

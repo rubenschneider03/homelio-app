@@ -745,31 +745,31 @@ export function MatchList() {
               E-Mail-Benachrichtigungen folgen bald.
             </p>
 
-            {/* Dossier CTA — only when user has at least one mutual match */}
-            {beidseitigApts.length > 0 && (
-              <div style={{
-                background: 'rgba(212,168,83,0.05)',
-                border: '1px solid rgba(212,168,83,0.20)',
-                borderRadius: 12,
-                padding: '18px 20px',
-                display: 'flex', flexDirection: 'column', gap: 12,
-              }}>
-                <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.72)', margin: 0, lineHeight: 1.68 }}>
-                  Sie haben ein Match. Ergänzen Sie Ihr Bewerbungsdossier, damit Homelio Ihre Anfrage später strukturiert an Verwaltungen weiterleiten kann.
-                </p>
-                <Link
-                  href="/profil/bewerbung"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    borderRadius: 999, background: '#d4a853', color: '#0C0A06',
-                    padding: '10px 20px', fontSize: 13, fontWeight: 500,
-                    textDecoration: 'none', letterSpacing: '0.02em', alignSelf: 'flex-start',
-                  }}
-                >
-                  Bewerbungsdossier ergänzen →
-                </Link>
-              </div>
-            )}
+            {/* Dossier CTA — always visible, text varies by match count */}
+            <div style={{
+              background: 'rgba(212,168,83,0.05)',
+              border: '1px solid rgba(212,168,83,0.20)',
+              borderRadius: 12,
+              padding: '18px 20px',
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.72)', margin: 0, lineHeight: 1.68 }}>
+                {beidseitigApts.length > 0
+                  ? 'Sie haben ein Match. Ergänzen Sie Ihr Bewerbungsdossier, damit Homelio Ihre Anfrage später strukturiert an Verwaltungen weiterleiten kann.'
+                  : 'Bereiten Sie Ihr Bewerbungsdossier bereits vor. Sobald ein Match entsteht, kann Homelio Ihre Anfrage später strukturiert an Verwaltungen weiterleiten.'}
+              </p>
+              <Link
+                href="/profil/bewerbung"
+                style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  borderRadius: 999, background: '#d4a853', color: '#0C0A06',
+                  padding: '10px 20px', fontSize: 13, fontWeight: 500,
+                  textDecoration: 'none', letterSpacing: '0.02em', alignSelf: 'flex-start',
+                }}
+              >
+                Bewerbungsdossier ergänzen →
+              </Link>
+            </div>
 
             <CardList
               apartments={beidseitigApts}
