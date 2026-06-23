@@ -8,9 +8,34 @@ interface Props {
 }
 
 export function PremiumComingSoonModal({ isOpen, onClose }: Props) {
-  const [noted, setNoted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
 
   if (!isOpen) return null
+
+  async function handleCheckout() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res  = await fetch('/api/checkout/premium', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(
+          data.error === 'setup_incomplete'
+            ? 'Premium-Zahlung ist noch nicht fertig eingerichtet.'
+            : 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+        )
+        setLoading(false)
+        return
+      }
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch {
+      setError('Verbindungsfehler. Bitte versuchen Sie es später erneut.')
+      setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -35,7 +60,7 @@ export function PremiumComingSoonModal({ isOpen, onClose }: Props) {
           boxShadow: '0 24px 64px rgba(0,0,0,0.48)',
         }}
       >
-        {/* Gold icon */}
+        {/* Icon */}
         <div style={{
           width: 52, height: 52, borderRadius: 999,
           background: 'rgba(212,168,83,0.10)',
@@ -52,38 +77,51 @@ export function PremiumComingSoonModal({ isOpen, onClose }: Props) {
             fontSize: 22, fontWeight: 400, color: '#f5f5f4',
             margin: '0 0 10px', lineHeight: 1.2,
           }}>
-            Premium ist bald verfügbar
+            Homelio Premium
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.55)', margin: 0, lineHeight: 1.72 }}>
-            Homelio Premium mit erweiterten Suchfiltern, höherer Matching-Priorität und frühzeitigem Zugang
-            zu neuen Angeboten befindet sich in Entwicklung.
+            Erweiterte Suchfilter, höhere Matching-Priorität und frühzeitiger Zugang
+            zu neuen Angeboten — einmalige Zahlung, kein Abo.
           </p>
         </div>
 
-        {noted ? (
+        {error ? (
           <div style={{
-            background: 'rgba(80,200,100,0.07)',
-            border: '1px solid rgba(80,200,100,0.20)',
+            background: 'rgba(220,80,80,0.07)',
+            border: '1px solid rgba(220,80,80,0.20)',
             borderRadius: 10, padding: '14px 18px',
-            fontSize: 14, color: 'rgba(120,220,130,0.90)',
+            fontSize: 13, color: 'rgba(245,245,244,0.60)',
             lineHeight: 1.55,
           }}>
-            ✓ Ihr Interesse wurde vorgemerkt. Wir informieren Sie, sobald Premium verfügbar ist.
+            {error}
           </div>
         ) : (
           <button
-            onClick={() => setNoted(true)}
+            onClick={handleCheckout}
+            disabled={loading}
             style={{
-              background: '#d4a853', color: '#0C0A06', border: 'none',
+              background: loading ? 'rgba(212,168,83,0.45)' : '#d4a853',
+              color: '#0C0A06', border: 'none',
               borderRadius: 999, padding: '13px 24px',
-              fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              fontSize: 14, fontWeight: 500,
+              cursor: loading ? 'default' : 'pointer',
               fontFamily: 'inherit', letterSpacing: '0.02em',
               alignSelf: 'flex-start',
+              transition: 'background 0.15s',
             }}
           >
-            Interesse vormerken
+            {loading ? 'Wird verarbeitet…' : 'Premium für CHF 19.– freischalten'}
           </button>
         )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.30)', margin: 0, lineHeight: 1.6 }}>
+            Einmalige Zahlung, CHF 19.–. Kein Abo, keine versteckten Kosten.
+          </p>
+          <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.6 }}>
+            Premium wird aktiviert, sobald die Zahlungsbestätigung eingegangen ist.
+          </p>
+        </div>
 
         <button
           onClick={onClose}
