@@ -30,7 +30,7 @@ export interface RentEstimateResult {
 }
 
 // MVP static assumption. Must be kept up to date from BWO hypothekarischer Referenzzinssatz.
-const CURRENT_REFERENCE_RATE = 1.50
+const CURRENT_REFERENCE_RATE = 1.25
 
 // Gross CHF/m² baseline by city — used for market sanity check and fallback anchor
 const CITY_BASELINES: Array<[string, number]> = [
