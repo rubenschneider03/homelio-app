@@ -17,9 +17,25 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Homelio – Der unsichtbare Wohnungsmarkt",
+  metadataBase: new URL('https://homelio.ch'),
+  title: 'Homelio – Der unsichtbare Wohnungsmarkt der Schweiz',
   description:
-    "Homelio vernetzt wechselwillige Mieter frühzeitig – bevor Wohnungen offiziell gekündigt oder ausgeschrieben werden.",
+    'Homelio verbindet wechselwillige Mieter frühzeitig und macht passende Wohnungswechsel möglich, bevor Wohnungen öffentlich ausgeschrieben werden.',
+  openGraph: {
+    title: 'Homelio – Der unsichtbare Wohnungsmarkt der Schweiz',
+    description:
+      'Homelio verbindet wechselwillige Mieter frühzeitig und macht passende Wohnungswechsel möglich, bevor Wohnungen öffentlich ausgeschrieben werden.',
+    url: 'https://homelio.ch',
+    siteName: 'Homelio',
+    locale: 'de_CH',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Homelio – Der unsichtbare Wohnungsmarkt der Schweiz',
+    description:
+      'Homelio verbindet wechselwillige Mieter frühzeitig und macht passende Wohnungswechsel möglich, bevor Wohnungen öffentlich ausgeschrieben werden.',
+  },
 };
 
 export default function RootLayout({
