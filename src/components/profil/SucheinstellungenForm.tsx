@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Toggle } from '@/components/ui/Toggle'
 import { Button } from '@/components/ui/Button'
 import { PremiumUpsellCard } from './PremiumUpsellCard'
+import { PremiumStatusCard } from './PremiumStatusCard'
 import { PremiumComingSoonModal } from '@/components/ui/PremiumComingSoonModal'
 import { createClient } from '@/lib/supabase/client'
 
@@ -125,6 +126,7 @@ export function SucheinstellungenForm() {
   const upd = <K extends keyof S>(k: K, v: S[K]) => setS(p => ({ ...p, [k]: v }))
 
   const [isPremium, setIsPremium] = useState(false)
+  const [hasStripeCustomer, setHasStripeCustomer] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -142,10 +144,11 @@ export function SucheinstellungenForm() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_premium')
+        .select('is_premium, stripe_customer_id')
         .eq('id', user.id)
         .single()
       setIsPremium(profile?.is_premium ?? false)
+      setHasStripeCustomer(!!profile?.stripe_customer_id)
 
       const { data: prefs } = await supabase
         .from('search_preferences')
@@ -384,8 +387,12 @@ export function SucheinstellungenForm() {
                 </div>
               </FieldGroup>
 
-              {/* ── Premium upsell card — only shown to non-premium users ── */}
-              {!isPremium && <PremiumUpsellCard />}
+              {/* ── Premium status (active/former subscriber) or upsell card ── */}
+              {isPremium || hasStripeCustomer ? (
+                <PremiumStatusCard isPremium={isPremium} hasStripeCustomer={hasStripeCustomer} />
+              ) : (
+                <PremiumUpsellCard />
+              )}
 
               {/* ── Premium-only fields ── */}
               <div style={{ position: 'relative' }}>
