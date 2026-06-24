@@ -15,11 +15,11 @@ export function Toggle({ label, hint, checked, onChange, optional }: ToggleProps
         <div style={{ fontSize: 14, color: 'rgba(245,245,244,0.88)', fontWeight: 400, lineHeight: 1.4 }}>
           {label}
           {optional && (
-            <span style={{ color: 'rgba(245,245,244,0.32)', fontSize: 12, marginLeft: 6 }}>optional</span>
+            <span style={{ color: 'rgba(245,245,244,0.40)', fontSize: 12, marginLeft: 6 }}>optional</span>
           )}
         </div>
         {hint && (
-          <div style={{ fontSize: 12, color: 'rgba(245,245,244,0.38)', marginTop: 3, lineHeight: 1.5 }}>{hint}</div>
+          <div style={{ fontSize: 12, color: 'rgba(245,245,244,0.48)', marginTop: 3, lineHeight: 1.5 }}>{hint}</div>
         )}
       </div>
 

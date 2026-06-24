@@ -109,6 +109,8 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
                 src={url}
                 alt={`Foto ${i + 1}`}
                 draggable={false}
+                loading="lazy"
+                decoding="async"
                 style={{
                   flex: '0 0 100%',
                   height: '100%',
@@ -122,7 +124,7 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
           </div>
         ) : (
           <p style={{
-            fontSize: 12, color: 'rgba(245,245,244,0.28)',
+            fontSize: 12, color: 'rgba(245,245,244,0.40)',
             margin: 0, textAlign: 'center', padding: '0 24px', lineHeight: 1.65,
           }}>
             {apartment.photoUrls === undefined
@@ -288,7 +290,7 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
                         Konfidenz: {estimate.confidence}
                       </span>
                     </div>
-                    <span style={{ fontSize: 10, color: 'rgba(245,245,244,0.28)', lineHeight: 1.4 }}>
+                    <span style={{ fontSize: 10, color: 'rgba(245,245,244,0.40)', lineHeight: 1.4 }}>
                       {estimate.referenceRateText}
                     </span>
                     <span style={{ fontSize: 11, color: 'rgba(245,245,244,0.45)', lineHeight: 1.5 }}>
@@ -317,7 +319,7 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
           </div>
 
           {/* Disclaimer */}
-          <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '8px 0 0', lineHeight: 1.6, fontStyle: 'italic' }}>
+          <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: '8px 0 0', lineHeight: 1.6, fontStyle: 'italic' }}>
             Unverbindliche Einschätzung auf Basis der verfügbaren Angaben.
           </p>
         </div>
@@ -360,7 +362,7 @@ export function MatchCard({ apartment, accepted, onAccept, onDecline, variant }:
 
         {/* Privacy note */}
         <p style={{
-          fontSize: 12, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.65,
+          fontSize: 12, color: 'rgba(245,245,244,0.40)', margin: 0, lineHeight: 1.65,
           paddingTop: 4,
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}>

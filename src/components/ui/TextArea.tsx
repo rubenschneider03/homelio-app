@@ -21,11 +21,11 @@ export function TextArea({ label, id, optional, hint, rows = 4, ...rest }: TextA
         fontWeight: 500,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        color: 'rgba(245,245,244,0.50)',
+        color: 'rgba(245,245,244,0.62)',
       }}>
         {label}
         {optional && (
-          <span style={{ color: 'rgba(245,245,244,0.28)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+          <span style={{ color: 'rgba(245,245,244,0.38)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
             optional
           </span>
         )}
@@ -61,7 +61,7 @@ export function TextArea({ label, id, optional, hint, rows = 4, ...rest }: TextA
       </div>
 
       {hint && (
-        <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.35)', lineHeight: 1.5 }}>{hint}</span>
+        <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.46)', lineHeight: 1.5 }}>{hint}</span>
       )}
     </div>
   )

@@ -74,7 +74,7 @@ export function PremiumUpsellCard() {
           Premium aktivieren →
         </button>
 
-        <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: 0, lineHeight: 1.6 }}>
           Monatliches Abo, jederzeit kündbar. Keine versteckten Kosten. Sicher und datenschutzkonform.
         </p>
       </div>

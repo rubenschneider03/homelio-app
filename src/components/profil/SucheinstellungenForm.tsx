@@ -363,7 +363,7 @@ export function SucheinstellungenForm() {
                             color: selected
                               ? '#d4a853'
                               : atMax
-                                ? 'rgba(245,245,244,0.22)'
+                                ? 'rgba(245,245,244,0.34)'
                                 : 'rgba(245,245,244,0.62)',
                             fontSize: 13, fontWeight: selected ? 500 : 400,
                             cursor: atMax ? 'default' : 'pointer',
@@ -377,7 +377,7 @@ export function SucheinstellungenForm() {
                     })}
                   </div>
                   {!isPremium && (
-                    <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', marginTop: 8 }}>
+                    <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', marginTop: 8 }}>
                       Mit Premium: bis zu 3 Zimmerzahlen gleichzeitig auswählen
                     </p>
                   )}

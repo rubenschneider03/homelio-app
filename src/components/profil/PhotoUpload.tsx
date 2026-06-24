@@ -410,6 +410,8 @@ export function PhotoUpload() {
                   src={photo.signedUrl}
                   alt={`Foto ${i + 1}`}
                   draggable={false}
+                  loading="lazy"
+                  decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                 />
@@ -459,7 +461,7 @@ export function PhotoUpload() {
 
       {/* Empty-state hint */}
       {photos.length === 0 && !loadError && (
-        <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.40)', margin: 0, lineHeight: 1.6 }}>
           Fotos helfen Interessenten, Ihre Wohnung besser einzuschätzen.
           Das erste Foto wird als Titelbild verwendet.
         </p>
@@ -472,7 +474,7 @@ export function PhotoUpload() {
             {photos.length} / {MAX_PHOTOS} Fotos · Zum Sortieren ziehen
           </p>
         )}
-        <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.25)', margin: 0 }}>
+        <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.38)', margin: 0 }}>
           HEIC-Vorschau ist je nach Browser eingeschränkt.
         </p>
       </div>

@@ -124,6 +124,36 @@ const T_INIT: T = {
 const row2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }
 const row3: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }
 
+// ── Local draft persistence ──────────────────────────────────────────────────
+// Protects against lost input (tab close, crash, accidental navigation) before
+// the user clicks "Profil speichern". Never overwrites real Supabase data with
+// an empty/default draft, and is cleared immediately after a successful save.
+const DRAFT_KEY = 'homelio_meine_wohnung_draft_v1'
+
+interface Draft { f: F; t: T }
+
+function isDraftMeaningful(draft: Draft): boolean {
+  const fChanged = Object.keys(INIT).some(
+    k => draft.f[k as keyof F] !== INIT[k as keyof F]
+  )
+  const tChanged = Object.keys(T_INIT).some(
+    k => (draft.t[k as keyof T] ?? '').trim() !== ''
+  )
+  return fChanged || tChanged
+}
+
+function readDraft(): Draft | null {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Draft
+    if (!parsed || typeof parsed !== 'object' || !parsed.f || !parsed.t) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
 export function MeineWohnungForm() {
   const router = useRouter()
 
@@ -137,6 +167,7 @@ export function MeineWohnungForm() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [hasDraft, setHasDraft] = useState(false)
 
   useEffect(() => {
     async function loadApartment() {
@@ -194,10 +225,37 @@ export function MeineWohnungForm() {
           isAuthorizedTenant: apt.is_authorized_tenant ?? false,
         })
       }
+
+      // Restore a local draft only if it actually contains unsaved input —
+      // never let an empty/default draft clobber data just loaded from Supabase.
+      const draft = readDraft()
+      if (draft && isDraftMeaningful(draft)) {
+        setF(draft.f)
+        setT(draft.t)
+        setHasDraft(true)
+      }
+
       setLoadingData(false)
     }
     loadApartment()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced autosave of unsaved input to localStorage.
+  useEffect(() => {
+    if (loadingData) return
+    const draft: Draft = { f, t }
+    const timeout = setTimeout(() => {
+      if (isDraftMeaningful(draft)) {
+        try {
+          window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+          setHasDraft(true)
+        } catch {
+          // localStorage unavailable (private mode / quota) — fail silently, no data loss beyond browser session
+        }
+      }
+    }, 600)
+    return () => clearTimeout(timeout)
+  }, [f, t, loadingData])
 
   async function handleSubmit() {
     setSaveError('')
@@ -282,6 +340,14 @@ export function MeineWohnungForm() {
     setSaving(false)
     setSaveSuccess(true)
 
+    // Saved successfully — the local draft is now stale, remove it.
+    try {
+      window.localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // localStorage unavailable — nothing to clean up
+    }
+    setHasDraft(false)
+
     // Trigger matching in background — failure is silent and never blocks the user.
     fetch('/api/run-matching', { method: 'POST' }).catch(() => {})
   }
@@ -295,7 +361,7 @@ export function MeineWohnungForm() {
     }}>
       {loadingData ? (
         <p style={{
-          fontSize: 14, color: 'rgba(245,245,244,0.40)',
+          fontSize: 14, color: 'rgba(245,245,244,0.50)',
           textAlign: 'center', padding: '60px 0', margin: 0,
         }}>
           Daten werden geladen…
@@ -303,14 +369,25 @@ export function MeineWohnungForm() {
       ) : (
         <>
           <div style={{ marginBottom: 36 }}>
-            <h2 style={{
-              fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
-              fontSize: 24, fontWeight: 400, color: '#f5f5f4',
-              margin: '0 0 8px', lineHeight: 1.2,
-            }}>
-              Meine Wohnung
-            </h2>
-            <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.42)', margin: 0, lineHeight: 1.65 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <h2 style={{
+                fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+                fontSize: 24, fontWeight: 400, color: '#f5f5f4',
+                margin: '0 0 8px', lineHeight: 1.2,
+              }}>
+                Meine Wohnung
+              </h2>
+              {hasDraft && (
+                <span style={{
+                  fontSize: 12, color: 'rgba(212,168,83,0.75)',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 999, background: 'rgba(212,168,83,0.75)', flexShrink: 0 }} />
+                  Entwurf lokal gespeichert
+                </span>
+              )}
+            </div>
+            <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.52)', margin: 0, lineHeight: 1.65 }}>
               Ihre Angaben helfen Homelio, passende Interessenten zu finden. Alle Pflichtfelder sind mit * markiert.
             </p>
           </div>
@@ -469,7 +546,7 @@ export function MeineWohnungForm() {
                   Ich bin der aktuelle Mieter dieser Wohnung und bin berechtigt, diese Angaben einzureichen. *
                 </span>
               </label>
-              <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.65 }}>
+              <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.40)', margin: 0, lineHeight: 1.65 }}>
                 Ihre Daten werden vertraulich behandelt und gemäss unserer{' '}
                 <a href="/datenschutz" style={{ color: '#d4a853', textDecoration: 'none' }}>Datenschutzerklärung</a>
                 {' '}gespeichert. Sie können Ihre Angaben jederzeit bearbeiten oder löschen.

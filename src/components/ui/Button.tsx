@@ -58,7 +58,7 @@ export function Button({
     },
     ghost: {
       background: 'transparent',
-      color: 'rgba(245,245,244,0.55)',
+      color: 'rgba(245,245,244,0.68)',
       border: 'none',
       padding: '8px 0',
     },

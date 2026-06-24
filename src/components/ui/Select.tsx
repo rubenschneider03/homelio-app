@@ -27,11 +27,11 @@ export function Select({ label, id, options, optional, placeholder, hint, value,
         fontWeight: 500,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        color: 'rgba(245,245,244,0.50)',
+        color: 'rgba(245,245,244,0.62)',
       }}>
         {label}
         {optional && (
-          <span style={{ color: 'rgba(245,245,244,0.28)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+          <span style={{ color: 'rgba(245,245,244,0.38)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
             optional
           </span>
         )}
@@ -46,7 +46,7 @@ export function Select({ label, id, options, optional, placeholder, hint, value,
           borderRadius: 8,
           padding: '11px 36px 11px 14px',
           fontSize: 15,
-          color: hasValue ? '#f5f5f4' : 'rgba(245,245,244,0.32)',
+          color: hasValue ? '#f5f5f4' : 'rgba(245,245,244,0.42)',
           outline: 'none',
           width: '100%',
           fontFamily: 'inherit',
@@ -65,7 +65,7 @@ export function Select({ label, id, options, optional, placeholder, hint, value,
       </select>
 
       {hint && (
-        <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.35)', lineHeight: 1.5 }}>{hint}</span>
+        <span style={{ fontSize: 12, color: 'rgba(245,245,244,0.46)', lineHeight: 1.5 }}>{hint}</span>
       )}
     </div>
   )

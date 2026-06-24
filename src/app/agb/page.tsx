@@ -102,7 +102,19 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="6. Premium-Funktionen">
+        <Section title="6. Erfolgsgebühr">
+          <p>
+            Bei erfolgreicher Vermittlung über Homelio wird eine einmalige Erfolgsgebühr von CHF 100 fällig.
+            Erfolgreich bedeutet, dass über einen Homelio-Kontakt ein Mietvertrag abgeschlossen wird.
+          </p>
+          <p>
+            Die Erfolgsgebühr wird unabhängig von einem allfälligen Premium-Abonnement erhoben und gilt
+            für alle Nutzerinnen und Nutzer gleich. Im Bewerbungsdossier wird diese Gebühr vor der
+            Markierung als «bereit zur Weiterleitung» separat zur Bestätigung vorgelegt.
+          </p>
+        </Section>
+
+        <Section title="7. Premium-Funktionen">
           <p>
             Homelio bietet kostenfreie Basisfunktionen sowie erweiterte Funktionen im Rahmen eines
             Abonnements («Homelio Premium»). Premium-Funktionen sind zum aktuellen Zeitpunkt noch in
@@ -115,7 +127,7 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="7. Keine Erfolgsgarantie">
+        <Section title="8. Keine Erfolgsgarantie">
           <p>
             Homelio garantiert keinen erfolgreichen Wohnungstausch, keine Vermittlung und keine Reaktion
             seitens einer Verwaltung. Die Plattform ist ein Hilfsmittel zur frühzeitigen Erkennung von
@@ -123,7 +135,7 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="8. Nutzerpflichten">
+        <Section title="9. Nutzerpflichten">
           <p>
             Nutzerinnen und Nutzer verpflichten sich, keine falschen Angaben zu machen, keine Inhalte
             hochzuladen, zu denen sie nicht berechtigt sind, und die Plattform nicht missbräuchlich zu
@@ -131,7 +143,7 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="9. Haftungsbeschränkung">
+        <Section title="10. Haftungsbeschränkung">
           <p>
             Homelio haftet nicht für Schäden, die durch unrichtige Nutzerangaben, technische Fehler
             oder die Nichterfüllung eines erhofften Wohnungswechsels entstehen, soweit dies gesetzlich
@@ -139,7 +151,7 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="10. Änderungen der AGB">
+        <Section title="11. Änderungen der AGB">
           <p>
             Homelio behält sich vor, diese AGB jederzeit anzupassen. Nutzerinnen und Nutzer werden über
             wesentliche Änderungen informiert. Die weitere Nutzung der Plattform nach Inkrafttreten
@@ -147,7 +159,7 @@ export default function AgbPage() {
           </p>
         </Section>
 
-        <Section title="11. Anwendbares Recht">
+        <Section title="12. Anwendbares Recht">
           <p>
             Es gilt Schweizer Recht. Gerichtsstand ist Zürich, soweit gesetzlich zulässig.
           </p>

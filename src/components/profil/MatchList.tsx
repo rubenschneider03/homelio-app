@@ -192,7 +192,7 @@ function NotificationToggle({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <span style={{
           fontSize: 13,
-          color: locked ? 'rgba(245,245,244,0.28)' : 'rgba(245,245,244,0.68)',
+          color: locked ? 'rgba(245,245,244,0.40)' : 'rgba(245,245,244,0.68)',
           lineHeight: 1.4,
           display: 'flex', alignItems: 'center', gap: 7,
         }}>
@@ -281,7 +281,7 @@ function PremiumGate({ count, onActivate }: { count: number; onActivate: () => v
       >
         Premium aktivieren — CHF 9.95 / Monat
       </button>
-      <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.25)', margin: 0 }}>
+      <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.38)', margin: 0 }}>
         Keine versteckten Kosten. Jederzeit kündbar.
       </p>
     </div>
@@ -309,7 +309,7 @@ function CardList({ apartments, onAccept, onDecline, variant, emptyMessage }: Ca
         <p style={{ fontSize: 15, color: 'rgba(245,245,244,0.40)', margin: '0 0 8px' }}>
           {emptyMessage ?? 'Keine weiteren Matches'}
         </p>
-        <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.25)', margin: 0 }}>
+        <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.38)', margin: 0 }}>
           Homelio sucht weiter und benachrichtigt Sie bei neuen Treffern.
         </p>
       </div>
@@ -636,7 +636,7 @@ export function MatchList() {
               checked={notifyRec}
               onChange={v => { setNotifyRec(v); saveNotifyPref('notify_recommendations', v) }}
             />
-            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
+            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
               E-Mail-Benachrichtigungen folgen bald.
             </p>
             <p style={{
@@ -744,7 +744,7 @@ export function MatchList() {
               checked={notifyBeidseitig}
               onChange={v => { setNotifyBeidseitig(v); saveNotifyPref('notify_mutual', v) }}
             />
-            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
+            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
               E-Mail-Benachrichtigungen folgen bald.
             </p>
 

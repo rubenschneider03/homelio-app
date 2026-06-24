@@ -39,7 +39,7 @@ export function FieldGroup({ title, description, premium, children }: FieldGroup
           )}
         </div>
         {description && (
-          <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.40)', margin: '0 0 10px', lineHeight: 1.55 }}>
+          <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.50)', margin: '0 0 10px', lineHeight: 1.55 }}>
             {description}
           </p>
         )}
