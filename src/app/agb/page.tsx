@@ -116,14 +116,19 @@ export default function AgbPage() {
 
         <Section title="7. Premium-Funktionen">
           <p>
-            Homelio bietet kostenfreie Basisfunktionen sowie erweiterte Funktionen im Rahmen eines
-            Abonnements («Homelio Premium»). Premium-Funktionen sind zum aktuellen Zeitpunkt noch in
-            Entwicklung und noch nicht käuflich erhältlich.
+            Homelio bietet kostenfreie Basisfunktionen sowie ein optionales Abonnement
+            («Homelio Premium») zu CHF 9.95 pro Monat. Premium schaltet erweiterte Suchfilter sowie eine
+            höhere Priorität im Matching-Algorithmus frei.
+          </p>
+          <p>
+            Das Abonnement wird über den Zahlungsdienstleister Stripe abgewickelt und verlängert sich
+            automatisch monatlich, bis es gekündigt wird. Nutzerinnen und Nutzer können ihr Abonnement
+            jederzeit selbständig über das Stripe-Kundenportal verwalten oder kündigen.
           </p>
           <p>
             Mit der Aktivierung eines Premium-Abonnements entstehen keine Garantien auf einen erfolgreichen
-            Wohnungswechsel. Das Abonnement beinhaltet lediglich den Zugang zu erweiterten Such- und
-            Filteroptionen sowie einer höheren Priorität im Matching-Algorithmus.
+            Wohnungswechsel. Premium ist von der in Ziffer 6 genannten Erfolgsgebühr unabhängig und
+            ersetzt diese nicht.
           </p>
         </Section>
 

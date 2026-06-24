@@ -489,7 +489,15 @@ export function SucheinstellungenForm() {
                       value={s.preferredManagements} onChange={e => upd('preferredManagements', e.target.value)} />
                     <Input label="Gesperrte Verwaltungen" placeholder="z.B. Verwaltung XY" hint="Angebote dieser Verwaltungen ausblenden." optional
                       value={s.blockedManagements} onChange={e => upd('blockedManagements', e.target.value)} />
-                    <Input label="Zweites Suchprofil (Name)" placeholder="z.B. Ausweichsuche Winterthur" hint="Bis zu 3 Suchprofile speichern." optional />
+                    <div style={{
+                      background: 'rgba(255,255,255,0.025)',
+                      border: '1px dashed rgba(255,255,255,0.12)',
+                      borderRadius: 10, padding: '14px 16px',
+                    }}>
+                      <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.45)', margin: 0, lineHeight: 1.55 }}>
+                        Mehrere Suchprofile (bis zu 3) folgen in einer späteren Version.
+                      </p>
+                    </div>
                   </FieldGroup>
 
                 </div>

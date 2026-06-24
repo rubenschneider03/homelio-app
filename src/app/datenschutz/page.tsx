@@ -93,7 +93,18 @@ export default function DatenschutzPage() {
           </p>
         </Section>
 
-        <Section title="5. Speicherort und Sicherheit">
+        <Section title="5. Zahlungsabwicklung">
+          <p>
+            Für das optionale Premium-Abonnement nutzt Homelio den Zahlungsdienstleister Stripe. Bei
+            Abschluss eines Abonnements werden Ihre E-Mail-Adresse sowie die zur Zahlungsabwicklung
+            notwendigen Daten an Stripe übermittelt. Kreditkarten- und sonstige Zahlungsdaten werden
+            ausschliesslich von Stripe verarbeitet und gespeichert — Homelio hat darauf keinen Zugriff
+            und speichert lediglich eine Stripe-interne Kunden- und Abonnement-Referenz zur Verwaltung
+            des Premium-Status.
+          </p>
+        </Section>
+
+        <Section title="6. Speicherort und Sicherheit">
           <p>
             Alle Daten werden in der Schweiz und in der EU auf Servern von Supabase (PostgreSQL-Datenbank)
             gespeichert. Die Datenbank ist durch Row-Level-Security (RLS) abgesichert: Jeder Nutzer kann
@@ -105,7 +116,7 @@ export default function DatenschutzPage() {
           </p>
         </Section>
 
-        <Section title="6. Aufbewahrungsdauer">
+        <Section title="7. Aufbewahrungsdauer">
           <p>
             Daten werden für die Dauer der aktiven Plattformnutzung gespeichert. Bei Kontolöschung werden
             alle personenbezogenen Daten und Fotos entfernt. Homelio behält sich vor, anonymisierte
@@ -113,7 +124,7 @@ export default function DatenschutzPage() {
           </p>
         </Section>
 
-        <Section title="7. Ihre Rechte">
+        <Section title="8. Ihre Rechte">
           <p>
             Sie haben jederzeit das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der
             Bearbeitung sowie Datenübertragbarkeit gemäss DSG/DSGVO. Für entsprechende Anfragen wenden
@@ -122,7 +133,7 @@ export default function DatenschutzPage() {
           </p>
         </Section>
 
-        <Section title="8. Cookies und Tracking">
+        <Section title="9. Cookies und Tracking">
           <p>
             Homelio verwendet ausschliesslich technisch notwendige Cookies (Session-Cookie für die
             Authentifizierung). Es werden keine Tracking-Cookies, Marketing-Cookies oder Third-Party-Skripte
@@ -130,7 +141,7 @@ export default function DatenschutzPage() {
           </p>
         </Section>
 
-        <Section title="9. Änderungen dieser Datenschutzerklärung">
+        <Section title="10. Änderungen dieser Datenschutzerklärung">
           <p>
             Homelio behält sich vor, diese Datenschutzerklärung jederzeit anzupassen. Nutzerinnen und
             Nutzer werden über wesentliche Änderungen informiert.

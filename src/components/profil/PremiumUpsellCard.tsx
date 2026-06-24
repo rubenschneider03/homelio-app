@@ -9,7 +9,7 @@ const BENEFITS = [
   'Präzisionsfilter: Mikrolage, Pendelzeit, Lärm, Besonnung, Stockwerk',
   'Höhere Priorität im Matching-Algorithmus',
   'Frühere Benachrichtigung und Zugang zu neuen Angeboten',
-  'Bevorzugte & gesperrte Verwaltungen, bis zu 3 Suchprofile',
+  'Bevorzugte & gesperrte Verwaltungen festlegen',
 ]
 
 export function PremiumUpsellCard() {

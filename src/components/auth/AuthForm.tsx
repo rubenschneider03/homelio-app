@@ -9,7 +9,7 @@ import { EmailConfirmScreen } from './EmailConfirmScreen'
 import { createClient } from '@/lib/supabase/client'
 
 type Tab = 'register' | 'login'
-type Step = 'form' | 'confirm'
+type Step = 'form' | 'confirm' | 'reset-sent'
 
 function mapAuthError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'E-Mail oder Passwort ist falsch.'
@@ -70,8 +70,59 @@ export function AuthForm() {
     await supabase.auth.resend({ type: 'signup', email })
   }
 
+  async function handleForgotPassword() {
+    if (!email) { setError('Bitte geben Sie zuerst Ihre E-Mail-Adresse ein.'); return }
+    setError('')
+    setLoading(true)
+    const supabase = createClient()
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/auth/reset-password',
+    })
+    setLoading(false)
+    // Always show the same confirmation, whether or not the address is registered —
+    // never reveal account existence via this flow.
+    setStep('reset-sent')
+  }
+
   if (step === 'confirm') {
     return <EmailConfirmScreen email={email} onResend={handleResend} />
+  }
+
+  if (step === 'reset-sent') {
+    return (
+      <GlassCard style={{ width: '100%', padding: '44px 32px', textAlign: 'center' }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 999,
+          background: 'rgba(212,168,83,0.10)',
+          border: '1px solid rgba(212,168,83,0.22)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 24px', fontSize: 22, color: '#d4a853',
+        }}>
+          ✉
+        </div>
+        <h2 style={{
+          fontFamily: 'var(--font-instrument-serif, Georgia, serif)',
+          fontSize: 22, fontWeight: 400, color: '#f5f5f4',
+          margin: '0 0 12px', lineHeight: 1.3,
+        }}>
+          E-Mail unterwegs
+        </h2>
+        <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.50)', lineHeight: 1.75, margin: '0 0 28px' }}>
+          Falls ein Konto mit dieser E-Mail-Adresse existiert, erhalten Sie in Kürze einen Link zum
+          Zurücksetzen Ihres Passworts.
+        </p>
+        <button
+          onClick={() => { setStep('form'); setTab('login') }}
+          style={{
+            background: 'transparent', border: 'none',
+            color: 'rgba(245,245,244,0.38)', fontSize: 13,
+            cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit',
+          }}
+        >
+          Zurück zur Anmeldung
+        </button>
+      </GlassCard>
+    )
   }
 
   return (
@@ -204,10 +255,12 @@ export function AuthForm() {
 
           <button
             type="button"
+            onClick={handleForgotPassword}
+            disabled={loading}
             style={{
               background: 'transparent', border: 'none',
               color: 'rgba(245,245,244,0.35)', fontSize: 12,
-              cursor: 'pointer', padding: '4px 0', fontFamily: 'inherit',
+              cursor: loading ? 'default' : 'pointer', padding: '4px 0', fontFamily: 'inherit',
               textAlign: 'center',
             }}
           >
