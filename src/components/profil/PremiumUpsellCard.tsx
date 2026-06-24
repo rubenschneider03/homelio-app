@@ -36,7 +36,7 @@ export function PremiumUpsellCard() {
               Homelio Premium
             </h3>
             <span style={{ fontSize: 13, color: 'rgba(245,245,244,0.45)', letterSpacing: '0.02em' }}>
-              CHF 19.– einmalige Zahlung
+              CHF 9.95 / Monat
             </span>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.45)', margin: 0, lineHeight: 1.6 }}>
@@ -75,7 +75,7 @@ export function PremiumUpsellCard() {
         </button>
 
         <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.6 }}>
-          Einmalige Zahlung. Kein Abo, kein automatischer Jahresvertrag. Sicher und datenschutzkonform.
+          Monatliches Abo, jederzeit kündbar. Keine versteckten Kosten. Sicher und datenschutzkonform.
         </p>
       </div>
 

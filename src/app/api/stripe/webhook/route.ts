@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
       serviceKey
     )
 
-    // Resolve customer ID — may be a string or expanded object
-    const customerId = typeof session.customer === 'string' ? session.customer : null
+    // Resolve customer/subscription IDs — may be strings or expanded objects
+    const customerId     = typeof session.customer === 'string' ? session.customer : null
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
 
     await serviceClient
       .from('profiles')
@@ -54,6 +55,19 @@ export async function POST(request: NextRequest) {
         stripe_checkout_session_id: session.id,
       })
       .eq('id', userId)
+
+    // Best-effort: stripe_subscription_id requires a column that is not yet
+    // part of any migration in this repo. Attempted separately so a missing
+    // column never blocks the core premium activation above.
+    if (subscriptionId) {
+      const { error: subError } = await serviceClient
+        .from('profiles')
+        .update({ stripe_subscription_id: subscriptionId })
+        .eq('id', userId)
+      if (subError) {
+        console.warn('stripe webhook: could not store stripe_subscription_id (column likely missing)')
+      }
+    }
   }
 
   return NextResponse.json({ received: true })

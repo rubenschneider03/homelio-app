@@ -26,7 +26,7 @@ export async function POST(_req: NextRequest) {
   const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' })
 
   const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
+    mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${siteUrl}/profil/sucheinstellungen?premium=success`,
     cancel_url:  `${siteUrl}/profil/sucheinstellungen?premium=cancelled`,

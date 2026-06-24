@@ -81,7 +81,7 @@ export function PremiumComingSoonModal({ isOpen, onClose }: Props) {
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(245,245,244,0.55)', margin: 0, lineHeight: 1.72 }}>
             Erweiterte Suchfilter, höhere Matching-Priorität und frühzeitiger Zugang
-            zu neuen Angeboten — einmalige Zahlung, kein Abo.
+            zu neuen Angeboten — CHF 9.95 / Monat, jederzeit kündbar.
           </p>
         </div>
 
@@ -110,13 +110,13 @@ export function PremiumComingSoonModal({ isOpen, onClose }: Props) {
               transition: 'background 0.15s',
             }}
           >
-            {loading ? 'Wird verarbeitet…' : 'Premium für CHF 19.– freischalten'}
+            {loading ? 'Wird verarbeitet…' : 'Premium für CHF 9.95 / Monat freischalten'}
           </button>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.30)', margin: 0, lineHeight: 1.6 }}>
-            Einmalige Zahlung, CHF 19.–. Kein Abo, keine versteckten Kosten.
+            CHF 9.95 / Monat. Monatlich kündbar, keine versteckten Kosten.
           </p>
           <p style={{ fontSize: 12, color: 'rgba(245,245,244,0.28)', margin: 0, lineHeight: 1.6 }}>
             Premium wird aktiviert, sobald die Zahlungsbestätigung eingegangen ist.
