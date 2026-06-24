@@ -360,17 +360,23 @@ export function MatchList() {
   const [matchPhotos, setMatchPhotos] = useState<Record<string, string[]>>({})
   const fetchedIds = useRef(new Set<string>())
 
-  // ── Persist a single notification toggle to search_preferences ───────────────
+  // ── Persist a single notification toggle to notification_preferences ─────────
+  // Gracefully no-ops if migration 007 hasn't been run yet (table missing) —
+  // the toggle still updates visually, but won't crash the page.
   async function saveNotifyPref(
-    key: 'notify_recommendations' | 'notify_gegenseite' | 'notify_mutual',
+    key: 'new_recommendations' | 'other_interested' | 'mutual_matches',
     val: boolean
   ) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase
-      .from('search_preferences')
-      .upsert({ user_id: user.id, [key]: val }, { onConflict: 'user_id' })
+    try {
+      await supabase
+        .from('notification_preferences')
+        .upsert({ user_id: user.id, [key]: val }, { onConflict: 'user_id' })
+    } catch {
+      // notification_preferences not migrated yet — ignore
+    }
   }
 
   // ── Data fetching ─────────────────────────────────────────────────────────────
@@ -384,15 +390,21 @@ export function MatchList() {
       return
     }
 
-    const [profileResult, matchResult, aptResult, prefsResult] = await Promise.all([
+    const [profileResult, matchResult, aptResult, prefsResult, notifyPrefsResult] = await Promise.all([
       supabase.from('profiles').select('is_premium').eq('id', user.id).single(),
       supabase.rpc('get_my_match_cards'),
       supabase.from('apartments').select('city, rooms, rent_gross, status').eq('user_id', user.id).single(),
       supabase
         .from('search_preferences')
-        .select('city_region, max_rent_gross, notify_recommendations, notify_gegenseite, notify_mutual')
+        .select('city_region, max_rent_gross')
         .eq('user_id', user.id)
         .single(),
+      // Graceful: migration 007 may not be run yet — table-missing errors are swallowed below.
+      supabase
+        .from('notification_preferences')
+        .select('new_recommendations, other_interested, mutual_matches')
+        .eq('user_id', user.id)
+        .maybeSingle(),
     ])
 
     setIsPremium(profileResult.data?.is_premium ?? false)
@@ -403,11 +415,12 @@ export function MatchList() {
     const prefs = prefsResult.data
     setPrefsReady(!!prefs && prefs.city_region != null && prefs.max_rent_gross != null)
 
-    // Load persisted notification preferences
-    if (prefs) {
-      setNotifyRec(prefs.notify_recommendations ?? true)
-      setNotifyGegenseite(prefs.notify_gegenseite ?? true)
-      setNotifyBeidseitig(prefs.notify_mutual ?? true)
+    // Load persisted notification preferences (defaults stay true if table is missing or no row yet)
+    const notifyPrefs = notifyPrefsResult.error ? null : notifyPrefsResult.data
+    if (notifyPrefs) {
+      setNotifyRec(notifyPrefs.new_recommendations ?? true)
+      setNotifyGegenseite(notifyPrefs.other_interested ?? true)
+      setNotifyBeidseitig(notifyPrefs.mutual_matches ?? true)
     }
 
     if (matchResult.error) {
@@ -632,13 +645,10 @@ export function MatchList() {
         {activeTab === 'empfehlungen' && (
           <>
             <NotificationToggle
-              label="E-Mail-Benachrichtigungen vormerken"
+              label="E-Mail bei neuen Empfehlungen"
               checked={notifyRec}
-              onChange={v => { setNotifyRec(v); saveNotifyPref('notify_recommendations', v) }}
+              onChange={v => { setNotifyRec(v); saveNotifyPref('new_recommendations', v) }}
             />
-            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
-              E-Mail-Benachrichtigungen folgen bald.
-            </p>
             <p style={{
               fontSize: 14, color: 'rgba(245,245,244,0.45)', lineHeight: 1.72,
               margin: 0, padding: '0 4px',
@@ -710,13 +720,13 @@ export function MatchList() {
           <>
             {isPremium ? (
               <NotificationToggle
-                label="E-Mail-Benachrichtigungen vormerken"
+                label="E-Mail wenn Gegenseite interessiert ist"
                 checked={notifyGegenseite}
-                onChange={v => { setNotifyGegenseite(v); saveNotifyPref('notify_gegenseite', v) }}
+                onChange={v => { setNotifyGegenseite(v); saveNotifyPref('other_interested', v) }}
               />
             ) : (
               <NotificationToggle
-                label="E-Mail-Benachrichtigungen vormerken"
+                label="E-Mail wenn Gegenseite interessiert ist"
                 checked={false}
                 onChange={() => {}}
                 locked
@@ -740,13 +750,10 @@ export function MatchList() {
         {activeTab === 'beidseitig' && (
           <>
             <NotificationToggle
-              label="E-Mail-Benachrichtigungen vormerken"
+              label="E-Mail bei neuem Match"
               checked={notifyBeidseitig}
-              onChange={v => { setNotifyBeidseitig(v); saveNotifyPref('notify_mutual', v) }}
+              onChange={v => { setNotifyBeidseitig(v); saveNotifyPref('mutual_matches', v) }}
             />
-            <p style={{ fontSize: 11, color: 'rgba(245,245,244,0.40)', margin: '-8px 0 0 4px', lineHeight: 1.55 }}>
-              E-Mail-Benachrichtigungen folgen bald.
-            </p>
 
             {/* Dossier CTA — always visible, text varies by match count */}
             <div style={{

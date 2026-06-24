@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createNotificationEvent } from '@/lib/notifications/create-notification-event'
 
 export async function POST(request: NextRequest) {
   // Read raw body before any parsing — required for Stripe signature verification
@@ -68,6 +69,14 @@ export async function POST(request: NextRequest) {
         console.warn('stripe webhook: could not store stripe_subscription_id (column likely missing)')
       }
     }
+
+    // Queue the premium_success email — idempotent, never blocks the webhook response.
+    await createNotificationEvent(serviceClient, {
+      userId,
+      type: 'premium_success',
+      matchId: null,
+      dedupeKey: `premium_success:${userId}:${session.id}`,
+    })
   }
 
   return NextResponse.json({ received: true })
