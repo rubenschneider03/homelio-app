@@ -76,7 +76,7 @@ export function AuthForm() {
     setLoading(true)
     const supabase = createClient()
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/auth/reset-password',
+      redirectTo: window.location.origin + '/auth/callback?next=/auth/reset-password',
     })
     setLoading(false)
     // Always show the same confirmation, whether or not the address is registered —

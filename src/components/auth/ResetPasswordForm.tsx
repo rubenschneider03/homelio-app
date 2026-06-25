@@ -19,15 +19,10 @@ export function ResetPasswordForm() {
 
   useEffect(() => {
     async function verify() {
+      // The code exchange now happens server-side in /auth/callback before this
+      // page is ever reached — the recovery session is already in cookies here.
+      // We only need to confirm it actually exists.
       const supabase = createClient()
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        setStatus(exchangeError ? 'invalid' : 'ready')
-        return
-      }
-      // Fallback: implicit-flow links establish a session via URL hash detection automatically.
       const { data: { session } } = await supabase.auth.getSession()
       setStatus(session ? 'ready' : 'invalid')
     }
