@@ -394,6 +394,23 @@ export function MeineWohnungForm() {
 
           <form onSubmit={e => { e.preventDefault(); handleSubmit() }} style={{ display: 'flex', flexDirection: 'column', gap: 44 }}>
 
+            {/* ── Save ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {saveError && (
+                <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>
+                  {saveError}
+                </p>
+              )}
+              {saveSuccess && (
+                <p style={{ fontSize: 13, color: 'rgba(80,200,100,0.90)', margin: 0, lineHeight: 1.5 }}>
+                  ✓ Änderungen gespeichert.
+                </p>
+              )}
+              <Button type="submit" fullWidth disabled={saving}>
+                {saving ? 'Wird gespeichert…' : 'Profil speichern'}
+              </Button>
+            </div>
+
             {/* ── Adresse ── */}
             <FieldGroup title="Adresse">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 12 }}>
@@ -557,23 +574,6 @@ export function MeineWohnungForm() {
             <FieldGroup title="Fotos" description="Bis zu 20 Fotos Ihrer aktuellen Wohnung. Helfen Interessenten bei der Einschätzung.">
               <PhotoUpload />
             </FieldGroup>
-
-            {/* ── Save ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 8 }}>
-              {saveError && (
-                <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>
-                  {saveError}
-                </p>
-              )}
-              {saveSuccess && (
-                <p style={{ fontSize: 13, color: 'rgba(80,200,100,0.90)', margin: 0, lineHeight: 1.5 }}>
-                  ✓ Änderungen gespeichert.
-                </p>
-              )}
-              <Button type="submit" fullWidth disabled={saving}>
-                {saving ? 'Wird gespeichert…' : 'Profil speichern'}
-              </Button>
-            </div>
 
           </form>
         </>

@@ -313,6 +313,23 @@ export function SucheinstellungenForm() {
 
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
 
+              {/* ── Save ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {saveError && (
+                  <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>
+                    {saveError}
+                  </p>
+                )}
+                {saveSuccess && (
+                  <p style={{ fontSize: 13, color: 'rgba(80,200,100,0.90)', margin: 0, lineHeight: 1.5 }}>
+                    ✓ Einstellungen gespeichert.
+                  </p>
+                )}
+                <Button type="submit" fullWidth disabled={saving}>
+                  {saving ? 'Wird gespeichert…' : 'Einstellungen speichern'}
+                </Button>
+              </div>
+
               {/* ── Kostenlose Basissuche ── */}
               <FieldGroup
                 title="Basissuche"
@@ -501,23 +518,6 @@ export function SucheinstellungenForm() {
                   </FieldGroup>
 
                 </div>
-              </div>
-
-              {/* ── Save ── */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {saveError && (
-                  <p style={{ fontSize: 13, color: 'rgba(220,80,80,0.90)', margin: 0, lineHeight: 1.5 }}>
-                    {saveError}
-                  </p>
-                )}
-                {saveSuccess && (
-                  <p style={{ fontSize: 13, color: 'rgba(80,200,100,0.90)', margin: 0, lineHeight: 1.5 }}>
-                    ✓ Einstellungen gespeichert.
-                  </p>
-                )}
-                <Button type="submit" fullWidth disabled={saving}>
-                  {saving ? 'Wird gespeichert…' : 'Einstellungen speichern'}
-                </Button>
               </div>
 
             </form>
