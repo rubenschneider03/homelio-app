@@ -38,22 +38,27 @@ export async function POST() {
     serviceKey
   )
 
+  // Any failure returns the failing step so the exact cause is visible instead
+  // of a generic message; full detail is also logged server-side.
+  const fail = (step: string, detail: unknown) => {
+    console.error(`[account/delete] step=${step}`, detail)
+    const message = detail instanceof Error ? detail.message
+      : (detail as { message?: string })?.message ?? String(detail)
+    return NextResponse.json({ error: 'Deletion failed.', step, detail: message }, { status: 500 })
+  }
+
   // 1. Find every match involving this user (either side).
   const { data: userMatches, error: matchSelErr } = await service
     .from('matches')
     .select('id')
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-  if (matchSelErr) {
-    return NextResponse.json({ error: 'Deletion failed (matches lookup).' }, { status: 500 })
-  }
+  if (matchSelErr) return fail('matches_select', matchSelErr)
   const matchIds = (userMatches ?? []).map(m => m.id)
 
   // 2. Delete audit events for those matches (FK: match_events → matches, no cascade).
   if (matchIds.length > 0) {
     const { error } = await service.from('match_events').delete().in('match_id', matchIds)
-    if (error) {
-      return NextResponse.json({ error: 'Deletion failed (match events).' }, { status: 500 })
-    }
+    if (error) return fail('match_events_delete', error)
   }
 
   // 3. Delete the matches themselves (FK: matches → profiles/apartments, no cascade).
@@ -61,9 +66,7 @@ export async function POST() {
     .from('matches')
     .delete()
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-  if (matchDelErr) {
-    return NextResponse.json({ error: 'Deletion failed (matches).' }, { status: 500 })
-  }
+  if (matchDelErr) return fail('matches_delete', matchDelErr)
 
   // 4. Remove photo files from storage (DB rows cascade, the files do not).
   const { data: photos } = await service
@@ -79,9 +82,7 @@ export async function POST() {
   // 5. Delete the auth user — cascades profile, apartment, search_preferences,
   //    apartment_photos rows and notification_* tables.
   const { error: delErr } = await service.auth.admin.deleteUser(userId)
-  if (delErr) {
-    return NextResponse.json({ error: 'Deletion failed (auth user).' }, { status: 500 })
-  }
+  if (delErr) return fail('auth_delete', delErr)
 
   return NextResponse.json({ ok: true })
 }
