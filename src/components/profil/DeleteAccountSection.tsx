@@ -25,8 +25,9 @@ export function DeleteAccountSection() {
       const res = await fetch('/api/account/delete', { method: 'POST' })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
-        const detail = data?.step ? ` (${data.step}${data.detail ? ': ' + data.detail : ''})` : ''
-        setError(`Das Konto konnte nicht gelöscht werden.${detail}`)
+        const parts = [data?.step, data?.detail, !data?.step ? data?.error : null].filter(Boolean)
+        const suffix = parts.length ? ` (${parts.join(': ')})` : ` (HTTP ${res.status})`
+        setError(`Das Konto konnte nicht gelöscht werden.${suffix}`)
         setDeleting(false)
         return
       }
