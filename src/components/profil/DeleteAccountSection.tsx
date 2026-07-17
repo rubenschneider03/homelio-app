@@ -31,8 +31,9 @@ export function DeleteAccountSection() {
         setDeleting(false)
         return
       }
-      // Clear the local session, then leave for the homepage.
-      await createClient().auth.signOut()
+      // The user no longer exists, so a server-side logout would 403. Clear the
+      // session locally only, then leave for the homepage.
+      await createClient().auth.signOut({ scope: 'local' })
       router.replace('/')
       router.refresh()
     } catch {
