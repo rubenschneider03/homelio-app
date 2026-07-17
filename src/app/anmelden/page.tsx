@@ -33,8 +33,7 @@ export default function AnmeldenPage() {
         </p>
         <p style={{ fontSize: 13, color: 'rgba(245,245,244,0.55)', lineHeight: 1.7, margin: 0 }}>
           Nein. Ihre aktuelle Verwaltung oder Ihr Vermieter wird nicht über Ihre Wechselabsicht
-          informiert. Eine Kontaktaufnahme erfolgt nur mit Ihrer ausdrücklichen Zustimmung.
-          Ihre Wohnung wird durch die Registrierung bei Homelio nicht automatisch gekündigt.
+          informiert.
         </p>
       </div>
     </AuthPageShell>
