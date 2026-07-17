@@ -204,18 +204,19 @@ function Vignette({ stops = 'rgba(4,3,2,0.90) 0%, rgba(4,3,2,0.54) 28%, rgba(4,3
 //  Mainframe 1 — MF0  (Video_1 paused at t=0)
 // ─────────────────────────────────────────────────────────────────────────────
 const TRUST_POINTS = [
-  'Ihre Daten bleiben vertraulich und geschützt.',
+  'Vertraulich: Ihre Verwaltung erfährt nichts von Ihrer Suche.',
   'Datenschutzkonform nach Schweizer Standards.',
   'Keine Weitergabe. Keine Werbung. Kein Spam.',
 ] as const;
 
-// Distinct icon per trust point — padlock / shield+check / blocked circle
+// Distinct icon per trust point — eye-off / shield+check / blocked circle
 const TRUST_ICONS = [
-  /* 0 — privacy / lock */
-  <svg key="lock" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-    <rect x="2.5" y="7" width="11" height="8" rx="1.5" stroke={GOLD} strokeWidth="1.1" />
-    <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" />
-    <circle cx="8" cy="11" r="1" fill={GOLD} />
+  /* 0 — confidential search / eye crossed out */
+  <svg key="eyeoff" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M1.8 8c1.3-2.3 3.5-3.8 6.2-3.8 1 0 1.9.2 2.7.6M14.2 8c-1.3 2.3-3.5 3.8-6.2 3.8-1 0-1.9-.2-2.7-.6"
+      stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" />
+    <circle cx="8" cy="8" r="1.9" stroke={GOLD} strokeWidth="1.1" />
+    <path d="M3 13.2L13 2.8" stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" />
   </svg>,
   /* 1 — Swiss compliance / shield + checkmark */
   <svg key="shield" width="18" height="18" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
@@ -521,8 +522,8 @@ const STEPS = [
     body: 'Wenn ein Vorschlag für Sie passt, akzeptieren Sie ihn verbindlich mit einem Klick.',
   },
   {
-    n: '4', title: 'Verwaltung prüft',
-    body: 'Wir schlagen Ihr Interesse der Verwaltung vor. Wenn diese zustimmt, wird der nächste Schritt vorbereitet.',
+    n: '4', title: 'Verwaltung der neuen Wohnung prüft',
+    body: 'Wir schlagen Ihr Interesse der Verwaltung der neuen Wohnung vor. Wenn diese zustimmt, wird der nächste Schritt vorbereitet.',
   },
   {
     n: '5', title: 'Besichtigung & Vertragsabschluss',
@@ -624,6 +625,13 @@ function MF2Content() {
               )}
             </div>
           ))}
+          <p style={{
+            fontSize: 'clamp(10px, 1.0vw, 12px)', fontWeight: 300, lineHeight: 1.55,
+            color: 'rgba(255,252,244,0.62)', margin: '10px 0 0', maxWidth: 360,
+          }}>
+            Sie entscheiden selbst, ob und wann Sie ein Angebot weiterverfolgen.
+            Ihre aktuelle Wohnung wird nicht automatisch gekündigt.
+          </p>
         </div>
       </div>
     </div>
@@ -700,6 +708,12 @@ function MF3Content() {
         >
           Jetzt unverbindlich Angebote erhalten <span aria-hidden>→</span>
         </a>
+        <p style={{
+          fontSize: 'clamp(11px, 1.1vw, 13px)', fontWeight: 300, lineHeight: 1.5,
+          color: 'rgba(255,252,244,0.62)', margin: '12px 0 0', maxWidth: 420,
+        }}>
+          Unverbindlich und vertraulich – Ihre Verwaltung wird nicht informiert.
+        </p>
       </div>
 
     </div>

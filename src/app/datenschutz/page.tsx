@@ -92,6 +92,15 @@ export default function DatenschutzPage() {
             Genaue Adressdaten (Strasse, Hausnummer, Wohnungsbezeichnung) sowie persönliche Kontaktdaten
             werden <strong>nie</strong> ohne ausdrückliche beidseitige Zustimmung weitergegeben.
           </p>
+          <p>
+            Ihre aktuelle Verwaltung oder Ihr Vermieter wird von Homelio nicht über Ihre Registrierung
+            oder Ihre Wechselabsicht informiert. Eine Kontaktaufnahme mit einer Verwaltung erfolgt nur
+            mit Ihrer ausdrücklichen Zustimmung.
+          </p>
+          <p>
+            Anonymisierte oder aggregierte Daten werden ausschliesslich so verwendet, dass daraus weder
+            eine bestimmte Person noch eine konkrete Wohnung identifizierbar ist.
+          </p>
         </Section>
 
         <Section title="5. Zahlungsabwicklung">
