@@ -11,6 +11,7 @@ import { PremiumUpsellCard } from './PremiumUpsellCard'
 import { PremiumStatusCard } from './PremiumStatusCard'
 import { PremiumComingSoonModal } from '@/components/ui/PremiumComingSoonModal'
 import { createClient } from '@/lib/supabase/client'
+import { trackProfileCompleted } from '@/lib/metaPixel'
 
 // Room size chips — stored as numeric values, displayed with 'Zi.'
 // '6+' maps to the value 6 in the DB (numeric(3,1) stores 6.0)
@@ -276,6 +277,16 @@ export function SucheinstellungenForm() {
 
     setSaving(false)
     setSaveSuccess(true)
+
+    // Central completeness check in the DB (mark_profile_completed_if_ready):
+    // returns true only on the very first transition to "complete". Failure of
+    // this call must never affect the save flow.
+    try {
+      const { data: firstCompletion } = await supabase.rpc('mark_profile_completed_if_ready')
+      if (firstCompletion === true) trackProfileCompleted()
+    } catch {
+      // RPC unavailable — saving stays unaffected
+    }
 
     fetch('/api/run-matching', { method: 'POST' }).catch(() => {})
   }

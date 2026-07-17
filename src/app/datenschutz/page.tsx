@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { CookieSettingsButton } from '@/components/consent/CookieSettingsButton'
 
 export const metadata: Metadata = {
   title: 'Datenschutz – Homelio',
@@ -135,10 +136,35 @@ export default function DatenschutzPage() {
 
         <Section title="9. Cookies und Tracking">
           <p>
-            Homelio verwendet ausschliesslich technisch notwendige Cookies (Session-Cookie für die
-            Authentifizierung). Es werden keine Tracking-Cookies, Marketing-Cookies oder Third-Party-Skripte
-            eingesetzt.
+            Homelio verwendet technisch notwendige Cookies (Session-Cookie für die Authentifizierung).
+            Diese sind für den Betrieb der Plattform erforderlich und können nicht deaktiviert werden.
           </p>
+          <p>
+            Zusätzlich setzt Homelio den Meta Pixel (Meta Platforms Ireland Limited) ein — jedoch nur,
+            wenn Sie Marketing-Cookies über den Cookie-Hinweis ausdrücklich akzeptiert haben. Ohne Ihre
+            Zustimmung wird kein Meta-Script geladen und kein Marketing-Tracking durchgeführt.
+          </p>
+          <p>
+            Bei erteilter Zustimmung können dabei Informationen wie besuchte Seiten, Browser- und
+            Gerätedaten, Ihre IP-Adresse sowie Interaktionen mit der Website verarbeitet werden. Meta
+            kann diese Daten gegebenenfalls mit einem bestehenden Meta-Konto (z.B. Facebook oder
+            Instagram) verknüpfen. Weitere Informationen finden Sie in den{' '}
+            <a
+              href="https://www.facebook.com/privacy/policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#d4a853', textDecoration: 'none' }}
+            >
+              Datenschutzhinweisen von Meta
+            </a>.
+          </p>
+          <p>
+            Sie können Ihre Einwilligung jederzeit über die Cookie-Einstellungen widerrufen. Nach einem
+            Widerruf werden keine weiteren Meta-Events mehr ausgelöst.
+          </p>
+          <div style={{ marginTop: 4 }}>
+            <CookieSettingsButton />
+          </div>
         </Section>
 
         <Section title="10. Änderungen dieser Datenschutzerklärung">

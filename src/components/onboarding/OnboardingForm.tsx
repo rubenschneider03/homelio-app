@@ -6,6 +6,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { trackCompleteRegistration } from '@/lib/metaPixel'
 
 export function OnboardingForm() {
   const router = useRouter()
@@ -54,15 +55,26 @@ export function OnboardingForm() {
       return
     }
 
-    const { error: profileError } = await supabase
+    // Set the completion timestamp only while it is still NULL: the returned
+    // rows are the durable, cross-device signal that onboarding was completed
+    // right now for the first time (a re-run matches zero rows).
+    const { data: completedNow, error: profileError } = await supabase
       .from('profiles')
       .update({ onboarding_completed_at: new Date().toISOString() })
       .eq('id', user.id)
+      .is('onboarding_completed_at', null)
+      .select('id')
 
     if (profileError) {
       setError('Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.')
       setLoading(false)
       return
+    }
+
+    // Meta event only on the first completion; sent only if marketing consent
+    // and the pixel are present (checked inside the helper).
+    if (completedNow && completedNow.length > 0) {
+      trackCompleteRegistration()
     }
 
     router.push('/profil/meine-wohnung')

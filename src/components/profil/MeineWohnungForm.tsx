@@ -10,6 +10,7 @@ import { TextArea } from '@/components/ui/TextArea'
 import { Button } from '@/components/ui/Button'
 import { PhotoUpload } from './PhotoUpload'
 import { createClient } from '@/lib/supabase/client'
+import { trackProfileCompleted } from '@/lib/metaPixel'
 
 const ROOMS = [
   { value: '1', label: '1 Zimmer' }, { value: '1.5', label: '1.5 Zimmer' },
@@ -347,6 +348,16 @@ export function MeineWohnungForm() {
       // localStorage unavailable — nothing to clean up
     }
     setHasDraft(false)
+
+    // Central completeness check in the DB (mark_profile_completed_if_ready):
+    // returns true only on the very first transition to "complete". Failure of
+    // this call must never affect the save flow.
+    try {
+      const { data: firstCompletion } = await supabase.rpc('mark_profile_completed_if_ready')
+      if (firstCompletion === true) trackProfileCompleted()
+    } catch {
+      // RPC unavailable — saving stays unaffected
+    }
 
     // Trigger matching in background — failure is silent and never blocks the user.
     fetch('/api/run-matching', { method: 'POST' }).catch(() => {})

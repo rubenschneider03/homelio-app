@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { CookieBanner } from "@/components/consent/CookieBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -43,7 +45,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="de" className={`${inter.variable} ${instrumentSerif.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieBanner />
+        <MetaPixel />
+      </body>
     </html>
   );
 }
