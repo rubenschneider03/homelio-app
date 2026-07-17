@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { PhotoUpload } from './PhotoUpload'
 import { createClient } from '@/lib/supabase/client'
 import { trackProfileCompleted } from '@/lib/metaPixel'
+import { DeleteAccountSection } from './DeleteAccountSection'
 
 const ROOMS = [
   { value: '1', label: '1 Zimmer' }, { value: '1.5', label: '1.5 Zimmer' },
@@ -587,6 +588,9 @@ export function MeineWohnungForm() {
             </FieldGroup>
 
           </form>
+
+          {/* Small danger zone — irreversible account deletion */}
+          <DeleteAccountSection />
         </>
       )}
     </div>
